@@ -69,7 +69,7 @@ with st.form("계약_입력_폼"):
         
     with c2:
         관리소전화 = st.text_input("관리소전화")
-        설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, key="cnt")
+        설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0, key="cnt_val")
         주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1)
         
         단가_옵션 = ["3,500,000", "2,500,000", "직접입력"]
@@ -80,19 +80,15 @@ with st.form("계약_입력_폼"):
         else:
             설치단가 = int(단가선택.replace(",", ""))
         
-        st.caption(f"💡 선택된 단가: **{설치단가:,}** 원")
-        
     with c3:
         계약년수 = st.number_input("계약년수 (년)", min_value=0, value=7)
         프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0)
         프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0)
         
-        # [수정] 자동 계산 및 실시간 반영 로직
-        최종금액_계산값 = 설치수량 * 설치단가
-        
-        # 사용자가 수동으로 고칠 수도 있게 하되, 기본값은 계산된 값으로 고정
-        설치금액 = st.number_input("최종 설치금액 (원)", min_value=0, value=최종금액_계산값, key="total_price")
-        st.info(f"💰 실시간 계산 금액: **{최종금액_계산값:,}** 원")
+        # [자동 계산 핵심] 수량 * 단가 결과를 바로 value에 할당
+        calc_total = 설치수량 * 설치단가
+        최종설치금액 = st.number_input("최종 설치금액 (원)", min_value=0, value=calc_total, key="total_price")
+        st.caption(f"💡 현재 계산된 금액: **{calc_total:,}** 원")
 
     col_btn1, col_btn2 = st.columns(2)
     미리보기_실행 = col_btn1.form_submit_button("🔍 서류 미리보기 (PDF)")
@@ -102,10 +98,11 @@ with st.form("계약_입력_폼"):
 데이터 = {
     "사업구분": 사업구분, "아파트명": 아파트명, "주소": 주소, "사업자번호": 사업자번호,
     "관리소전화": 관리소전화, "설치수량": 설치수량, "주차면수": 주차면수, "설치단가": 설치단가,
-    "설치금액": 설치금액, "계약년수": 계약년수, "프로모션기간": 프로모션기간, "프로모션요금": 프로모션요금
+    "설치금액": 최종설치금액, # 최종 입력된 금액 사용
+    "계약년수": 계약년수, "프로모션기간": 프로모션기간, "프로모션요금": 프로모션요금
 }
 
-# 4. 미리보기 로직
+# 4. 미리보기 및 5. 저장/생성 로직 (이하 동일)
 if 미리보기_실행:
     if not 아파트명: st.warning("아파트명을 입력해주세요.")
     else:
@@ -118,7 +115,6 @@ if 미리보기_실행:
                 base64_pdf = base64.b64encode(pdf_bin).decode('utf-8')
                 st.markdown(f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>', unsafe_allow_html=True)
 
-# 5. 생성 및 저장 로직
 if 생성_실행:
     if not 아파트명: st.error("아파트명은 필수입니다.")
     else:
