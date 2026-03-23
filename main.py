@@ -97,13 +97,16 @@ if 미리보기_실행:
                 pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
                 st.markdown(pdf_display, unsafe_allow_html=True)
 
-# 4. 저장 및 다운로드
+# 4. 저장 및 다운로드 (upsert 로직으로 변경)
 if 저장생성:
     try:
-        supabase.table("contracts").insert(데이터).execute()
-        st.success("✅ DB 저장 및 서류 생성 완료!")
+        # '아파트명'을 기준으로 중복이면 업데이트, 없으면 삽입 (on_conflict='아파트명')
+        # 주의: Supabase 테이블 설정에서 '아파트명'이 PK(Primary Key)여야 작동합니다.
+        supabase.table("contracts").upsert(데이터, on_conflict="아파트명").execute()
         
-        # 파일 생성
+        st.success(f"✅ '{아파트명}' 데이터가 업데이트(또는 저장) 되었습니다!")
+        
+        # 파일 생성 및 다운로드 버튼 로직
         hwpx_output = process_hwpx("templates/신청서_양식.hwpx", 데이터)
         doc = DocxTemplate("templates/계약서_양식.docx")
         doc.render(데이터)
@@ -113,5 +116,6 @@ if 저장생성:
         d1, d2 = st.columns(2)
         d1.download_button("📂 신청서(HWP) 받기", hwpx_output, f"{아파트명}_신청서.hwpx")
         d2.download_button("📂 계약서(워드) 받기", docx_io.getvalue(), f"{아파트명}_계약서.docx")
+        
     except Exception as e:
         st.error(f"오류 발생: {e}")
