@@ -35,15 +35,28 @@ def process_hwpx(template_path, data):
 
 # PDF 변환 함수 (미리보기용)
 def convert_to_pdf(input_data, file_extension):
-    temp_filename = f"temp_file{file_extension}"
-    with open(temp_filename, "wb") as f:
-        f.write(input_data)
-    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', temp_filename])
-    pdf_filename = "temp_file.pdf"
-    if os.path.exists(pdf_filename):
-        with open(pdf_filename, "rb") as f:
-            pdf_bytes = f.read()
-        return pdf_bytes
+    # 파일명을 아파트명 등으로 고유하게 설정 (충돌 방지)
+    import uuid
+    unique_id = str(uuid.uuid4())[:8]
+    temp_filename = f"temp_{unique_id}{file_extension}"
+    pdf_filename = f"temp_{unique_id}.pdf"
+
+    try:
+        with open(temp_filename, "wb") as f:
+            f.write(input_data)
+        
+        # '--outdir .' 옵션을 추가하여 현재 폴더에 PDF가 생성되도록 강제함
+        subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', temp_filename, '--outdir', '.'], check=True)
+        
+        if os.path.exists(pdf_filename):
+            with open(pdf_filename, "rb") as f:
+                pdf_bytes = f.read()
+            # 사용 후 임시 파일 삭제 (서버 용량 관리)
+            os.remove(temp_filename)
+            os.remove(pdf_filename)
+            return pdf_bytes
+    except Exception as e:
+        st.error(f"PDF 변환 중 오류 발생: {e}")
     return None
 
 st.set_page_config(page_title="EV-CON", layout="wide")
