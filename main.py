@@ -78,12 +78,15 @@ with st.form("계약_입력_폼"):
         설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0)
         주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0)
         
-        # 설치단가 선택 로직
-        단가_리스트 = ["2,500,000", "3,500,000", "직접입력"]
-        단가선택 = st.selectbox("설치단가 선택", 단가_리스트, index=1) # 350만 기본값
+        # [수정] 단가 선택 상태 유지 로직
+        단가_옵션 = ["3,500,000", "2,500,000", "직접입력"]
+        
+        # selectbox에 key를 부여하여 상태를 강제 고정합니다.
+        단가선택 = st.selectbox("설치단가 선택", 단가_옵션, index=0, key="price_select")
         
         if 단가선택 == "직접입력":
-            설치단가 = st.number_input("단가 직접 입력 (원)", min_value=0, step=10000, value=0)
+            # 직접 입력 시에도 값이 초기화되지 않도록 key를 부여합니다.
+            설치단가 = st.number_input("단가 직접 입력 (원)", min_value=0, step=10000, key="custom_price")
         else:
             설치단가 = int(단가선택.replace(",", ""))
         
