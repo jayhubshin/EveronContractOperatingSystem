@@ -107,7 +107,7 @@ with st.form("계약_입력_폼"):
     "설치금액": 설치금액, "계약년수": 계약년수, "프로모션기간": 프로모션기간, "프로모션요금": 프로모션요금
 }
 
-# 4. 미리보기 로직
+# 4. 미리보기 로직 (신청서 + 계약서 통합)
 if 미리보기_실행:
     if not 아파트명:
         st.warning("아파트명을 입력해야 미리보기가 가능합니다.")
@@ -115,16 +115,34 @@ if 미리보기_실행:
         st.subheader("📋 입력 데이터 요약")
         st.table(pd.Series(데이터, name="내용"))
         
-        with st.spinner('실시간 서류 양식 로딩 중...'):
+        with st.spinner('실시간 서류 양식(신청서 & 계약서) 생성 중...'):
+            # --- [1] 신청서 (HWPX -> PDF) 변환 ---
             hwpx_bin = process_hwpx("templates/신청서_양식.hwpx", 데이터)
-            if hwpx_bin:
-                pdf_bin = convert_to_pdf(hwpx_bin, ".hwpx")
-                if pdf_bin:
-                    base64_pdf = base64.b64encode(pdf_bin).decode('utf-8')
-                    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
-                    st.markdown(pdf_display, unsafe_allow_html=True)
+            pdf_hwpx = convert_to_pdf(hwpx_bin, ".hwpx") if hwpx_bin else None
+            
+            # --- [2] 계약서 (DOCX -> PDF) 변환 ---
+            doc = DocxTemplate("templates/계약서_양식.docx")
+            doc.render(데이터)
+            docx_io = io.BytesIO()
+            doc.save(docx_io)
+            pdf_docx = convert_to_pdf(docx_io.getvalue(), ".docx")
+            
+            # --- 화면 출력 ---
+            t1, t2 = st.tabs(["📄 1. 보조금 신청서 미리보기", "📄 2. 설치운영 계약서 미리보기"])
+            
+            with t1:
+                if pdf_hwpx:
+                    base64_pdf1 = base64.b64encode(pdf_hwpx).decode('utf-8')
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{base64_pdf1}" width="100%" height="800" type="application/pdf"></iframe>', unsafe_allow_html=True)
                 else:
-                    st.info("💡 서버 환경에 따라 양식 미리보기가 제한될 수 있습니다. 위 요약표를 확인해 주세요.")
+                    st.info("💡 신청서 미리보기를 불러올 수 없습니다. 다운로드 후 확인해주세요.")
+            
+            with t2:
+                if pdf_docx:
+                    base64_pdf2 = base64.b64encode(pdf_docx).decode('utf-8')
+                    st.markdown(f'<iframe src="data:application/pdf;base64,{base64_pdf2}" width="100%" height="800" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                else:
+                    st.info("💡 계약서 미리보기를 불러올 수 없습니다. 다운로드 후 확인해주세요.")
 
 # 5. 생성 및 저장 로직
 if 생성_실행:
