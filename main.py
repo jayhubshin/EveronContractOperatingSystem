@@ -69,7 +69,7 @@ st.sidebar.header("⚙️ 시스템 설정")
 저장옵션 = st.sidebar.radio(
     "데이터 저장 방식",
     ["DB 저장 및 서류 생성", "저장 없이 서류만 생성"],
-    index=0,
+    index=1,
     help="기존 데이터 덮어쓰기를 원하시면 'DB 저장'을 선택하세요."
 )
 
