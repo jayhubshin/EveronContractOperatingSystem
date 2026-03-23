@@ -133,14 +133,16 @@ if 미리보기_실행:
             with t1:
                 if pdf_hwpx:
                     base64_pdf1 = base64.b64encode(pdf_hwpx).decode('utf-8')
-                    st.markdown(f'<iframe src="data:application/pdf;base64,{base64_pdf1}" width="100%" height="800" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                    pdf_display1 = f'<embed src="data:application/pdf;base64,{base64_pdf1}" width="100%" height="800" type="application/pdf">'
+                    st.markdown(pdf_display1, unsafe_allow_html=True)
                 else:
                     st.info("💡 신청서 미리보기를 불러올 수 없습니다. 다운로드 후 확인해주세요.")
             
             with t2:
                 if pdf_docx:
                     base64_pdf2 = base64.b64encode(pdf_docx).decode('utf-8')
-                    st.markdown(f'<iframe src="data:application/pdf;base64,{base64_pdf2}" width="100%" height="800" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                    pdf_display2 = f'<embed src="data:application/pdf;base64,{base64_pdf2}" width="100%" height="800" type="application/pdf">'
+                    st.markdown(pdf_display2, unsafe_allow_html=True)
                 else:
                     st.info("💡 계약서 미리보기를 불러올 수 없습니다. 다운로드 후 확인해주세요.")
 
