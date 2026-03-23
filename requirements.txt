@@ -3,3 +3,4 @@ supabase
 docxtpl
 python-docx
 pandas
+libreoffice
