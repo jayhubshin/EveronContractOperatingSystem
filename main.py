@@ -50,23 +50,6 @@ def fetch_template(filename: str) -> bytes | None:
     except Exception as e:
         st.warning(f"템플릿 로드 오류: {e}")
         return None
-# ── 사업자번호 자동 포맷 ────────────────────────────────
-def format_biz_no(value: str) -> str:
-    digits = "".join(filter(str.isdigit, value))
-    if len(digits) <= 3:
-        return digits
-    elif len(digits) <= 5:
-        return f"{digits[:3]}-{digits[3:]}"
-    else:
-        return f"{digits[:3]}-{digits[3:5]}-{digits[5:10]}"
-
-def on_biz_change():
-    raw = st.session_state["biz_input"]
-    st.session_state["biz_input"] = format_biz_no(raw)
-
-# ── 세션 초기화 ─────────────────────────────────────────
-if "biz_input" not in st.session_state:
-    st.session_state["biz_input"] = ""
 
 # ── 국세청 사업자 조회 ──────────────────────────────────
 def lookup_business(biz_no: str) -> dict | None:
@@ -92,9 +75,9 @@ def lookup_business(biz_no: str) -> dict | None:
             items = resp.json().get("data", [])
             if not items:
                 return None
-            item = items[0]
-            상태코드 = item.get("b_stt_cd", "")
-            상태_map = {"01": "✅ 계속사업자", "02": "⚠️ 휴업자", "03": "❌ 폐업자"}
+            item     = items[0]
+            상태코드  = item.get("b_stt_cd", "")
+            상태_map  = {"01": "✅ 계속사업자", "02": "⚠️ 휴업자", "03": "❌ 폐업자"}
             return {"상태": 상태_map.get(상태코드, "알 수 없음"), "상태코드": 상태코드}
         else:
             st.error(f"API 오류: {resp.status_code}")
@@ -102,6 +85,20 @@ def lookup_business(biz_no: str) -> dict | None:
     except Exception as e:
         st.error(f"사업자 조회 오류: {e}")
         return None
+
+# ── 사업자번호 포맷 ─────────────────────────────────────
+def format_biz_no(value: str) -> str:
+    digits = "".join(filter(str.isdigit, value))
+    if len(digits) <= 3:
+        return digits
+    elif len(digits) <= 5:
+        return f"{digits[:3]}-{digits[3:]}"
+    else:
+        return f"{digits[:3]}-{digits[3:5]}-{digits[5:10]}"
+
+def on_biz_change():
+    raw = st.session_state["biz_input"]
+    st.session_state["biz_input"] = format_biz_no(raw)
 
 # ── HWPX 메일머지 ───────────────────────────────────────
 def process_hwpx(template_bytes: bytes, data: dict) -> bytes | None:
@@ -142,12 +139,152 @@ def process_docx(template_bytes: bytes, data: dict) -> bytes | None:
         return None
 
 # ── 세션 초기화 ─────────────────────────────────────────
+if "biz_input" not in st.session_state:
+    st.session_state["biz_input"] = ""
 if "biz_상호" not in st.session_state:
     st.session_state["biz_상호"] = ""
 if "biz_주소" not in st.session_state:
     st.session_state["biz_주소"] = ""
 
-# ── 사이드바 ────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
+#  ★ 순서 중요: 입력 위젯 → 데이터 구성 → 사이드바 버튼
+# ════════════════════════════════════════════════════════
+
+st.subheader("📝 계약 정보 입력")
+st.divider()
+
+# ── 사업자번호 조회 ─────────────────────────────────────
+st.markdown("**🏢 사업장 정보**")
+col_biz, col_btn = st.columns([4, 1])
+with col_biz:
+    st.text_input(
+        "사업자번호",
+        key="biz_input",
+        placeholder="예) 2108261110 → 210-82-61110 자동변환",
+        max_chars=12,
+        on_change=on_biz_change
+    )
+    사업자번호 = st.session_state["biz_input"]
+with col_btn:
+    st.markdown("<br/>", unsafe_allow_html=True)
+    조회버튼 = st.button("🔍 조회", use_container_width=True)
+
+if 조회버튼:
+    if not 사업자번호:
+        st.warning("사업자번호를 입력해주세요.")
+    else:
+        with st.spinner("국세청 조회 중..."):
+            result = lookup_business(사업자번호)
+            if result:
+                코드 = result.get("상태코드", "")
+                if 코드 == "01":
+                    st.success(f"{result.get('상태')} — 상호/주소를 직접 입력해주세요.")
+                elif 코드 == "02":
+                    st.warning(f"{result.get('상태')}")
+                elif 코드 == "03":
+                    st.error(f"{result.get('상태')} — 계약 불가")
+            else:
+                st.error("❌ 조회 결과 없음")
+
+# ── 행 1: 사업구분 / 아파트명 ──────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    사업구분 = st.selectbox("사업구분", [
+        "한국환경공단 이사장",
+        "주식회사 에버온인프라",
+        "기타"
+    ])
+with c2:
+    아파트명 = st.text_input(
+        "아파트명 *",
+        value=st.session_state["biz_상호"],
+        placeholder="예) 래미안 강남 1단지"
+    )
+
+# ── 행 2: 주소 / 관리소전화 ────────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    주소 = st.text_input(
+        "주소",
+        value=st.session_state["biz_주소"],
+        placeholder="예) 서울특별시 강남구 테헤란로 123"
+    )
+with c2:
+    관리소전화 = st.text_input("관리소전화", placeholder="예) 02-1234-5678")
+
+st.divider()
+st.markdown("**🔌 설치 정보**")
+
+# ── 행 3: 설치수량 / 주차면수 ──────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0)
+with c2:
+    주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0)
+
+# ── 행 4: 설치단가 / 직접입력 ──────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    단가선택 = st.selectbox("설치단가", ["3,500,000", "2,500,000", "직접입력"])
+with c2:
+    if 단가선택 == "직접입력":
+        설치단가 = st.number_input("단가 직접입력 (원)", min_value=0, step=10000, value=0)
+    else:
+        설치단가 = int(단가선택.replace(",", ""))
+        st.text_input("선택 단가", value=f"{설치단가:,} 원", disabled=True)
+
+# ── 행 5: 최종설치금액 ──────────────────────────────────
+calc = 설치수량 * 설치단가
+c1, c2 = st.columns(2)
+with c1:
+    최종설치금액 = st.number_input(
+        "최종 설치금액 (원)",
+        min_value=0,
+        value=calc,
+        step=1,
+        format="%d"
+    )
+with c2:
+    st.text_input("금액 확인", value=f"{최종설치금액:,} 원", disabled=True)
+
+st.divider()
+st.markdown("**📋 계약 조건**")
+
+# ── 행 6: 계약년수 / 프로모션기간 ──────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    계약년수 = st.number_input("계약년수 (년)", min_value=0, value=7)
+with c2:
+    프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0, value=0)
+
+# ── 행 7: 프로모션요금 ──────────────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0, value=0)
+with c2:
+    st.text_input("프로모션요금 확인", value=f"{프로모션요금:,} 원", disabled=True)
+
+st.divider()
+
+# ── 데이터 구성 (입력 위젯 다음에 위치) ────────────────
+데이터 = {
+    "사업구분":       사업구분,
+    "아파트명":       아파트명,
+    "주소":           주소,
+    "사업자번호":     사업자번호,
+    "관리소전화":     관리소전화,
+    "설치수량":       설치수량,
+    "주차면수":       주차면수,
+    "설치단가":       f"{설치단가:,}",
+    "설치금액":       f"{최종설치금액:,}",
+    "계약년수":       계약년수,
+    "프로모션기간":   프로모션기간,
+    "프로모션기간월": 프로모션기간,
+    "프로모션요금":   f"{프로모션요금:,}",
+    "프로모션요금원": f"{프로모션요금:,}",
+}
+
+# ── 사이드바 (데이터 구성 다음에 위치) ─────────────────
 st.sidebar.header("⚙️ 시스템 설정")
 저장옵션 = st.sidebar.radio(
     "데이터 저장 방식",
@@ -174,6 +311,7 @@ st.sidebar.markdown("---")
     type="primary"
 )
 
+# ── 서류 생성 (사이드바 안에서 출력) ───────────────────
 if 생성실행:
     if not 아파트명:
         st.sidebar.error("❌ 아파트명은 필수입니다.")
@@ -181,7 +319,6 @@ if 생성실행:
         with st.sidebar:
             with st.spinner("📄 서류 생성 중..."):
 
-                # DB 저장
                 if 저장옵션 == "DB 저장 및 서류 생성":
                     if supabase:
                         try:
@@ -230,152 +367,3 @@ if 생성실행:
                         st.error("DOCX 생성 실패")
                 else:
                     st.error("계약서 템플릿 로드 실패")
-
-
-# ════════════════════════════════════════════════════════
-#  입력 섹션
-# ════════════════════════════════════════════════════════
-st.subheader("📝 계약 정보 입력")
-st.divider()
-
-# ── 사업자번호 조회 (전체 폭) ───────────────────────────
-# ── 사업자번호 조회 (전체 폭) ───────────────────────────
-st.markdown("**🏢 사업장 정보**")
-
-# 세션 초기화
-if "사업자번호_raw" not in st.session_state:
-    st.session_state["사업자번호_raw"] = ""
-
-col_biz, col_btn = st.columns([4, 1])
-col_biz, col_btn = st.columns([4, 1])
-with col_biz:
-    st.text_input(
-        "사업자번호",
-        key="biz_input",
-        placeholder="예) 2108261110 → 자동으로 210-82-61110",
-        max_chars=12,
-        on_change=on_biz_change    # ← 입력 끝날 때마다 자동 포맷
-    )
-    사업자번호 = st.session_state["biz_input"]
-
-with col_btn:
-    st.markdown("<br/>", unsafe_allow_html=True)
-    조회버튼 = st.button("🔍 조회", use_container_width=True)
-
-
-
-if 조회버튼:
-    if not 사업자번호:
-        st.warning("사업자번호를 입력해주세요.")
-    else:
-        with st.spinner("국세청 조회 중..."):
-            result = lookup_business(사업자번호)
-            if result:
-                코드 = result.get("상태코드", "")
-                if 코드 == "01":
-                    st.success(f"{result.get('상태')} — 상호/주소를 직접 입력해주세요.")
-                elif 코드 == "02":
-                    st.warning(f"{result.get('상태')}")
-                elif 코드 == "03":
-                    st.error(f"{result.get('상태')} — 계약 불가")
-            else:
-                st.error("❌ 조회 결과 없음")
-
-# ── 행 1: 사업구분 / 아파트명 ──────────────────────────
-c1, c2 = st.columns(2)
-with c1:
-    사업구분 = st.selectbox("사업구분", [
-        "한국환경공단 이사장",
-        "주식회사 에버온인프라",
-        "기타"
-    ])
-with c2:
-    아파트명 = st.text_input(
-        "아파트명 *",
-        value=st.session_state["biz_상호"],
-        placeholder="예) 래미안 강남 1단지"
-    )
-
-# ── 행 2: 주소 / 관리소전화 ────────────────────────────
-c1, c2 = st.columns(2)
-with c1:
-    주소 = st.text_input(
-        "주소",
-        value=st.session_state["biz_주소"],
-        placeholder="예) 서울특별시 강남구 테헤란로 123"
-    )
-with c2:
-    관리소전화 = st.text_input("관리소전화", placeholder="예) 02-1234-5678")
-
-st.divider()
-
-# ── 행 3: 설치수량 / 주차면수 ──────────────────────────
-st.markdown("**🔌 설치 정보**")
-c1, c2 = st.columns(2)
-with c1:
-    설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0)
-with c2:
-    주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0)
-
-# ── 행 4: 설치단가 / 직접입력 ──────────────────────────
-c1, c2 = st.columns(2)
-with c1:
-    단가선택 = st.selectbox("설치단가", ["3,500,000", "2,500,000", "직접입력"])
-with c2:
-    if 단가선택 == "직접입력":
-        설치단가 = st.number_input("단가 직접입력 (원)", min_value=0, step=10000, value=0)
-    else:
-        설치단가 = int(단가선택.replace(",", ""))
-        st.text_input("선택 단가", value=f"{설치단가:,} 원", disabled=True)
-
-# ── 행 5: 최종설치금액 ──────────────────────────────────
-calc = 설치수량 * 설치단가
-c1, c2 = st.columns(2)
-with c1:
-    최종설치금액 = st.number_input(
-        "최종 설치금액 (원)",
-        min_value=0,
-        value=calc,
-        step=1,
-        format="%d"
-    )
-with c2:
-    st.text_input("금액 확인", value=f"{최종설치금액:,} 원", disabled=True)
-
-st.divider()
-
-# ── 행 6: 계약년수 / 프로모션기간 ──────────────────────
-st.markdown("**📋 계약 조건**")
-c1, c2 = st.columns(2)
-with c1:
-    계약년수 = st.number_input("계약년수 (년)", min_value=0, value=7)
-with c2:
-    프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0, value=0)
-
-# ── 행 7: 프로모션요금 ──────────────────────────────────
-c1, c2 = st.columns(2)
-with c1:
-    프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0, value=0)
-with c2:
-    st.text_input("프로모션요금 확인", value=f"{프로모션요금:,} 원", disabled=True)
-
-st.divider()
-
-# ── 데이터 구성 ─────────────────────────────────────────
-데이터 = {
-    "사업구분":       사업구분,
-    "아파트명":       아파트명,
-    "주소":           주소,
-    "사업자번호":     사업자번호,
-    "관리소전화":     관리소전화,
-    "설치수량":       설치수량,
-    "주차면수":       주차면수,
-    "설치단가":       f"{설치단가:,}",
-    "설치금액":       f"{최종설치금액:,}",
-    "계약년수":       계약년수,
-    "프로모션기간":   프로모션기간,
-    "프로모션기간월": 프로모션기간,
-    "프로모션요금":   f"{프로모션요금:,}",
-    "프로모션요금원": f"{프로모션요금:,}",
-}
-
