@@ -139,11 +139,15 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**📁 템플릿 상태**")
 for fn in ["신청서_양식.hwpx", "계약서_양식.docx"]:
     tpl = fetch_template(fn)
-    st.sidebar.success(f"✅ {fn}") if tpl else st.sidebar.error(f"❌ {fn}")
+    if tpl:
+        st.sidebar.success(f"✅ {fn}")
+    else:
+        st.sidebar.error(f"❌ {fn}")
 
 if st.sidebar.button("🔄 템플릿 새로고침"):
     st.cache_data.clear()
     st.rerun()
+
 
 # ════════════════════════════════════════════════════════
 #  세션 상태 초기화 (사업자 조회 결과 저장용)
