@@ -1,135 +1,302 @@
-import streamlit as st
-from docxtpl import DocxTemplate
-from supabase import create_client
-import pandas as pd
-import zipfile
-import io
 import os
+import io
+import uuid
+import zipfile
 import base64
 import subprocess
+import httpx
 
-# 1. Supabase 접속 설정
-try:
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    supabase = create_client(url, key)
-except:
-    st.error("Streamlit Secrets 설정을 확인해주세요.")
+from fastapi import FastAPI, BackgroundTasks
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from docxtpl import DocxTemplate
+from dotenv import load_dotenv
 
-# [함수] HWPX 텍스트 치환
-def process_hwpx(template_path, data):
-    try:
-        with zipfile.ZipFile(template_path, 'r') as zin:
-            with io.BytesIO() as out_zip:
-                with zipfile.ZipFile(out_zip, 'w') as zout:
-                    for item in zin.infolist():
-                        buffer = zin.read(item.filename)
-                        if item.filename.startswith('Contents/section') and item.filename.endswith('.xml'):
-                            content = buffer.decode('utf-8')
-                            for key, value in data.items():
-                                disp = f"{value:,}" if isinstance(value, int) and value > 999 else str(value)
-                                content = content.replace(f"{{{{{key}}}}}", disp)
-                            buffer = content.encode('utf-8')
-                        zout.writestr(item, buffer)
-                return out_zip.getvalue()
-    except: return None
+load_dotenv()
 
-# [함수] PDF 변환
-def convert_to_pdf(input_data, file_extension):
-    import uuid
-    uid = str(uuid.uuid4())[:8]
-    tmp_in, tmp_out = f"temp_{uid}{file_extension}", f"temp_{uid}.pdf"
-    try:
-        with open(tmp_in, "wb") as f: f.write(input_data)
-        subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', tmp_in, '--outdir', '.'], check=True)
-        if os.path.exists(tmp_out):
-            with open(tmp_out, "rb") as f: pdf_bytes = f.read()
-            os.remove(tmp_in); os.remove(tmp_out)
-            return pdf_bytes
-    except: return None
+app = FastAPI(title="EV-CON API")
 
-# --- UI 설정 ---
-st.set_page_config(page_title="EV-CON", layout="wide")
-st.title("⚡ EV-CON: 에버온 계약 지원 시스템")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# 2. 사이드바 설정 (디폴트: 저장 없이)
-st.sidebar.header("⚙️ 시스템 설정")
-저장옵션 = st.sidebar.radio("데이터 저장 방식", ["DB 저장 및 서류 생성", "저장 없이 서류만 생성"], index=1)
+# ── 환경변수 ────────────────────────────────────────────────
+SUPABASE_URL   = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY   = os.getenv("SUPABASE_KEY", "")
+GITHUB_REPO    = os.getenv("GITHUB_REPO", "")        # "username/repo"
+GITHUB_TOKEN   = os.getenv("GITHUB_TOKEN", "")
+GITHUB_BRANCH  = os.getenv("GITHUB_BRANCH", "main")
 
-# 3. 입력 폼 및 자동 계산 로직
-with st.form("계약_입력_폼"):
-    st.subheader("📝 상세 계약 정보 입력")
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        사업구분 = st.selectbox("사업구분", ["한국환경공단 이사장", "주식회사 에버온인프라", "기타"])
-        아파트명 = st.text_input("아파트명 (고유키)")
-        주소 = st.text_input("주소")
-        사업자번호 = st.text_input("사업자번호")
-        
-    with c2:
-        관리소전화 = st.text_input("관리소전화")
-        설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0, key="cnt_val")
-        주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1)
-        
-        단가_옵션 = ["3,500,000", "2,500,000", "직접입력"]
-        단가선택 = st.selectbox("설치단가 선택", 단가_옵션, index=0, key="price_sel")
-        
-        if 단가선택 == "직접입력":
-            설치단가 = st.number_input("단가 직접 입력 (원)", min_value=0, step=10000, key="p_input")
+# Supabase 클라이언트 (선택적)
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    from supabase import create_client
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# 정적 파일 서빙
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+TEMPLATES_DIR = "templates"
+os.makedirs(TEMPLATES_DIR, exist_ok=True)
+os.makedirs("outputs", exist_ok=True)
+
+
+# ── 데이터 모델 ─────────────────────────────────────────────
+class ContractData(BaseModel):
+    사업구분:     str = ""
+    아파트명:     str = ""
+    주소:         str = ""
+    사업자번호:   str = ""
+    관리소전화:   str = ""
+    설치수량:     int = 0
+    주차면수:     int = 0
+    설치단가:     int = 0
+    설치금액:     int = 0
+    계약년수:     int = 0
+    프로모션기간: int = 0
+    프로모션요금: int = 0
+    saveMode:     str = "local"
+
+
+# ── GitHub에서 템플릿 다운로드 ──────────────────────────────
+async def fetch_template_from_github(filename: str) -> bytes | None:
+    """
+    GitHub raw content API로 templates/ 폴더의 파일을 바이너리로 가져옵니다.
+    """
+    url = (
+        f"https://api.github.com/repos/{GITHUB_REPO}/contents/templates/{filename}"
+        f"?ref={GITHUB_BRANCH}"
+    )
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, headers=headers)
+        if resp.status_code != 200:
+            print(f"GitHub 파일 조회 실패 ({filename}): {resp.status_code} {resp.text}")
+            return None
+        data = resp.json()
+        # GitHub API는 base64로 인코딩된 content를 반환
+        content_b64 = data.get("content", "").replace("\n", "")
+        return base64.b64decode(content_b64)
+
+
+async def get_template(filename: str) -> bytes | None:
+    """
+    로컬 캐시 우선, 없으면 GitHub에서 다운로드.
+    """
+    local_path = os.path.join(TEMPLATES_DIR, filename)
+    if os.path.exists(local_path):
+        with open(local_path, "rb") as f:
+            return f.read()
+    # GitHub에서 가져오기
+    data = await fetch_template_from_github(filename)
+    if data:
+        # 로컬 캐시 저장
+        with open(local_path, "wb") as f:
+            f.write(data)
+    return data
+
+
+# ── GitHub 템플릿 강제 새로고침 엔드포인트 ─────────────────
+@app.post("/api/refresh-templates")
+async def refresh_templates():
+    """로컬 캐시를 삭제하고 GitHub에서 최신 템플릿을 다시 받습니다."""
+    results = {}
+    for filename in ["계약서_양식.docx", "신청서_양식.hwpx"]:
+        local_path = os.path.join(TEMPLATES_DIR, filename)
+        if os.path.exists(local_path):
+            os.remove(local_path)
+        data = await fetch_template_from_github(filename)
+        if data:
+            with open(local_path, "wb") as f:
+                f.write(data)
+            results[filename] = "✅ 갱신 완료"
         else:
-            설치단가 = int(단가선택.replace(",", ""))
-        
-    with c3:
-        계약년수 = st.number_input("계약년수 (년)", min_value=0, value=7)
-        프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0)
-        프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0)
-        
-        # [자동 계산 핵심] 수량 * 단가 결과를 바로 value에 할당
-        calc_total = 설치수량 * 설치단가
-        최종설치금액 = st.number_input("최종 설치금액 (원)", min_value=0, value=calc_total, key="total_price")
-        st.caption(f"💡 현재 계산된 금액: **{calc_total:,}** 원")
+            results[filename] = "❌ 갱신 실패"
+    return JSONResponse(results)
 
-    col_btn1, col_btn2 = st.columns(2)
-    미리보기_실행 = col_btn1.form_submit_button("🔍 서류 미리보기 (PDF)")
-    생성_실행 = col_btn2.form_submit_button("🚀 서류 생성 및 저장 실행")
 
-# 데이터 매핑
-데이터 = {
-    "사업구분": 사업구분, "아파트명": 아파트명, "주소": 주소, "사업자번호": 사업자번호,
-    "관리소전화": 관리소전화, "설치수량": 설치수량, "주차면수": 주차면수, "설치단가": 설치단가,
-    "설치금액": 최종설치금액, # 최종 입력된 금액 사용
-    "계약년수": 계약년수, "프로모션기간": 프로모션기간, "프로모션요금": 프로모션요금
-}
+# ── HWPX 메일머지 (텍스트 치환) ────────────────────────────
+def process_hwpx(template_bytes: bytes, data: dict) -> bytes | None:
+    """
+    HWPX(ZIP 구조) 내부 XML에서 {{키}} 패턴을 데이터로 치환합니다.
+    """
+    try:
+        in_zip  = io.BytesIO(template_bytes)
+        out_zip = io.BytesIO()
+        with zipfile.ZipFile(in_zip, 'r') as zin, \
+             zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                buffer = zin.read(item.filename)
+                # Contents/section*.xml 파일만 치환
+                if (item.filename.startswith("Contents/section")
+                        and item.filename.endswith(".xml")):
+                    content = buffer.decode("utf-8")
+                    for key, value in data.items():
+                        if isinstance(value, int) and value > 999:
+                            display = f"{value:,}"
+                        else:
+                            display = str(value)
+                        content = content.replace(f"{{{{{key}}}}}", display)
+                    buffer = content.encode("utf-8")
+                zout.writestr(item, buffer)
+        return out_zip.getvalue()
+    except Exception as e:
+        print(f"HWPX 처리 오류: {e}")
+        return None
 
-# 4. 미리보기 및 5. 저장/생성 로직 (이하 동일)
-if 미리보기_실행:
-    if not 아파트명: st.warning("아파트명을 입력해주세요.")
-    else:
-        st.subheader("📋 입력 데이터 확인")
-        st.table(pd.Series(데이터, name="내용"))
-        with st.spinner('미리보기 생성 중...'):
-            hwpx_bin = process_hwpx("templates/신청서_양식.hwpx", 데이터)
-            pdf_bin = convert_to_pdf(hwpx_bin, ".hwpx") if hwpx_bin else None
-            if pdf_bin:
-                base64_pdf = base64.b64encode(pdf_bin).decode('utf-8')
-                st.markdown(f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>', unsafe_allow_html=True)
 
-if 생성_실행:
-    if not 아파트명: st.error("아파트명은 필수입니다.")
-    else:
+# ── DOCX 메일머지 (docxtpl 사용) ───────────────────────────
+def process_docx(template_bytes: bytes, data: dict) -> bytes | None:
+    """
+    docxtpl의 Jinja2 방식 {{ 키 }} 치환을 사용합니다.
+    """
+    try:
+        tmp_path = f"outputs/tmp_{uuid.uuid4().hex[:8]}.docx"
+        with open(tmp_path, "wb") as f:
+            f.write(template_bytes)
+        doc = DocxTemplate(tmp_path)
+        doc.render(data)
+        out = io.BytesIO()
+        doc.save(out)
+        os.remove(tmp_path)
+        return out.getvalue()
+    except Exception as e:
+        print(f"DOCX 처리 오류: {e}")
+        return None
+
+
+# ── 데이터 딕셔너리 준비 (saveMode 제외) ───────────────────
+def build_context(contract: ContractData) -> dict:
+    ctx = contract.model_dump(exclude={"saveMode"})
+    # 금액 포맷 추가 (템플릿에서 {{설치금액_fmt}} 형태로도 사용 가능)
+    ctx["설치단가_fmt"]   = f"{ctx['설치단가']:,}"
+    ctx["설치금액_fmt"]   = f"{ctx['설치금액']:,}"
+    ctx["프로모션요금_fmt"] = f"{ctx['프로모션요금']:,}"
+    return ctx
+
+
+# ── 엔드포인트: HWPX 다운로드 ──────────────────────────────
+@app.post("/api/generate/hwpx")
+async def generate_hwpx(contract: ContractData):
+    tmpl_bytes = await get_template("신청서_양식.hwpx")
+    if not tmpl_bytes:
+        return JSONResponse({"error": "신청서_양식.hwpx 템플릿을 찾을 수 없습니다."}, status_code=404)
+
+    ctx = build_context(contract)
+    result = process_hwpx(tmpl_bytes, ctx)
+    if not result:
+        return JSONResponse({"error": "HWPX 메일머지 실패"}, status_code=500)
+
+    # DB 저장 (옵션)
+    if contract.saveMode == "db" and supabase:
         try:
-            if 저장옵션 == "DB 저장 및 서류 생성":
-                supabase.table("contracts").upsert(데이터, on_conflict="아파트명").execute()
-                st.success("✅ DB 저장 완료!")
-            
-            hwpx_out = process_hwpx("templates/신청서_양식.hwpx", 데이터)
-            doc = DocxTemplate("templates/계약서_양식.docx")
-            doc.render(데이터)
-            docx_io = io.BytesIO(); doc.save(docx_io)
-            
-            st.subheader("📥 최종 서류 다운로드")
-            d1, d2 = st.columns(2)
-            if hwpx_out: d1.download_button("📂 신청서(HWP) 받기", hwpx_out, f"{아파트명}_신청서.hwpx")
-            d2.download_button("📂 계약서(워드) 받기", docx_io.getvalue(), f"{아파트명}_계약서.docx")
-        except Exception as e: st.error(f"오류: {e}")
+            supabase.table("contracts").upsert(
+                contract.model_dump(exclude={"saveMode"}),
+                on_conflict="아파트명"
+            ).execute()
+        except Exception as e:
+            print(f"DB 저장 오류: {e}")
+
+    filename = f"{contract.아파트명}_신청서.hwpx"
+    return StreamingResponse(
+        io.BytesIO(result),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+            "Content-Length": str(len(result)),
+        }
+    )
+
+
+# ── 엔드포인트: DOCX 다운로드 ──────────────────────────────
+@app.post("/api/generate/docx")
+async def generate_docx(contract: ContractData):
+    tmpl_bytes = await get_template("계약서_양식.docx")
+    if not tmpl_bytes:
+        return JSONResponse({"error": "계약서_양식.docx 템플릿을 찾을 수 없습니다."}, status_code=404)
+
+    ctx = build_context(contract)
+    result = process_docx(tmpl_bytes, ctx)
+    if not result:
+        return JSONResponse({"error": "DOCX 메일머지 실패"}, status_code=500)
+
+    filename = f"{contract.아파트명}_계약서.docx"
+    return StreamingResponse(
+        io.BytesIO(result),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+            "Content-Length": str(len(result)),
+        }
+    )
+
+
+# ── 엔드포인트: 두 파일 동시 생성 ─────────────────────────
+@app.post("/api/generate/all")
+async def generate_all(contract: ContractData):
+    ctx = build_context(contract)
+    apt = contract.아파트명
+    errors = []
+    files  = {}
+
+    # HWPX
+    hwpx_tmpl = await get_template("신청서_양식.hwpx")
+    if hwpx_tmpl:
+        hwpx_bytes = process_hwpx(hwpx_tmpl, ctx)
+        if hwpx_bytes:
+            files["hwpx"] = base64.b64encode(hwpx_bytes).decode()
+        else:
+            errors.append("HWPX 메일머지 실패")
+    else:
+        errors.append("신청서_양식.hwpx 템플릿 없음")
+
+    # DOCX
+    docx_tmpl = await get_template("계약서_양식.docx")
+    if docx_tmpl:
+        docx_bytes = process_docx(docx_tmpl, ctx)
+        if docx_bytes:
+            files["docx"] = base64.b64encode(docx_bytes).decode()
+        else:
+            errors.append("DOCX 메일머지 실패")
+    else:
+        errors.append("계약서_양식.docx 템플릿 없음")
+
+    # DB 저장
+    if contract.saveMode == "db" and supabase:
+        try:
+            supabase.table("contracts").upsert(
+                contract.model_dump(exclude={"saveMode"}),
+                on_conflict="아파트명"
+            ).execute()
+        except Exception as e:
+            errors.append(f"DB 저장 오류: {e}")
+
+    return JSONResponse({
+        "apt": apt,
+        "files": files,   # base64 인코딩된 파일 데이터
+        "errors": errors,
+    })
+
+
+# ── 루트 ────────────────────────────────────────────────────
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
+
+
+# ── 템플릿 상태 확인 ────────────────────────────────────────
+@app.get("/api/template-status")
+async def template_status():
+    status = {}
+    for fn in ["계약서_양식.docx", "신청서_양식.hwpx"]:
+        local = os.path.join(TEMPLATES_DIR, fn)
+        status[fn] = "로컬 캐시 있음" if os.path.exists(local) else "GitHub에서 로드 필요"
+    return JSONResponse(status)
