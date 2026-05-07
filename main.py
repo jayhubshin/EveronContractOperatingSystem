@@ -7,7 +7,7 @@ import base64
 import httpx
 
 # ── 페이지 설정 ─────────────────────────────────────────
-st.set_page_config(page_title="EV-CON", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="EV-CON", page_icon="⚡", layout="wide")
 st.title("⚡ EV-CON: 에버온 계약 지원 시스템")
 
 # ── Supabase 연결 ───────────────────────────────────────
@@ -58,45 +58,30 @@ def lookup_business(biz_no: str) -> dict | None:
         if not api_key:
             st.warning("⚠️ NTS_API_KEY가 Secrets에 없습니다.")
             return None
-
         biz_no_clean = biz_no.replace("-", "").replace(" ", "").strip()
         if len(biz_no_clean) != 10:
             st.warning("⚠️ 사업자번호 10자리를 확인해주세요.")
             return None
-
         url  = "https://api.odcloud.kr/api/nts-businessman/v1/status"
         body = {"b_no": [biz_no_clean]}
-
         resp = httpx.post(
             url,
             params={"serviceKey": api_key},
             json=body,
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
             timeout=10
         )
-
         if resp.status_code == 200:
             items = resp.json().get("data", [])
             if not items:
                 return None
-            item     = items[0]
-            상태코드  = item.get("b_stt_cd", "")
-            상태_map  = {
-                "01": "✅ 계속사업자",
-                "02": "⚠️ 휴업자",
-                "03": "❌ 폐업자"
-            }
-            return {
-                "상태":   상태_map.get(상태코드, "알 수 없음"),
-                "상태코드": 상태코드,
-            }
+            item = items[0]
+            상태코드 = item.get("b_stt_cd", "")
+            상태_map = {"01": "✅ 계속사업자", "02": "⚠️ 휴업자", "03": "❌ 폐업자"}
+            return {"상태": 상태_map.get(상태코드, "알 수 없음"), "상태코드": 상태코드}
         else:
-            st.error(f"API 오류: {resp.status_code} / {resp.text}")
+            st.error(f"API 오류: {resp.status_code}")
             return None
-
     except Exception as e:
         st.error(f"사업자 조회 오류: {e}")
         return None
@@ -160,39 +145,25 @@ for fn in ["신청서_양식.hwpx", "계약서_양식.docx"]:
         st.sidebar.success(f"✅ {fn}")
     else:
         st.sidebar.error(f"❌ {fn}")
-
 if st.sidebar.button("🔄 템플릿 새로고침"):
     st.cache_data.clear()
     st.rerun()
 
 # ════════════════════════════════════════════════════════
-#  입력 섹션 (폼 없이 실시간)
+#  입력 섹션
 # ════════════════════════════════════════════════════════
-
 st.subheader("📝 계약 정보 입력")
 st.divider()
 
-# ── 1. 사업장 정보 ──────────────────────────────────────
+# ── 사업자번호 조회 (전체 폭) ───────────────────────────
 st.markdown("**🏢 사업장 정보**")
-
-사업구분 = st.selectbox("사업구분", [
-    "한국환경공단 이사장",
-    "주식회사 에버온인프라",
-    "기타"
-])
-
-# 사업자번호 + 조회버튼
-col_biz, col_btn = st.columns([3, 1])
+col_biz, col_btn = st.columns([4, 1])
 with col_biz:
-    사업자번호 = st.text_input(
-        "사업자번호",
-        placeholder="예) 123-45-67890"
-    )
+    사업자번호 = st.text_input("사업자번호", placeholder="예) 123-45-67890")
 with col_btn:
     st.markdown("<br/>", unsafe_allow_html=True)
     조회버튼 = st.button("🔍 조회", use_container_width=True)
 
-# 조회 실행
 if 조회버튼:
     if not 사업자번호:
         st.warning("사업자번호를 입력해주세요.")
@@ -200,86 +171,93 @@ if 조회버튼:
         with st.spinner("국세청 조회 중..."):
             result = lookup_business(사업자번호)
             if result:
-                상태코드 = result.get("상태코드", "")
-                if 상태코드 == "01":
+                코드 = result.get("상태코드", "")
+                if 코드 == "01":
                     st.success(f"{result.get('상태')} — 상호/주소를 직접 입력해주세요.")
-                elif 상태코드 == "02":
+                elif 코드 == "02":
                     st.warning(f"{result.get('상태')}")
-                elif 상태코드 == "03":
-                    st.error(f"{result.get('상태')} — 계약 불가 사업자입니다.")
+                elif 코드 == "03":
+                    st.error(f"{result.get('상태')} — 계약 불가")
             else:
-                st.error("❌ 조회 결과가 없습니다.")
+                st.error("❌ 조회 결과 없음")
 
-아파트명 = st.text_input(
-    "아파트명 *",
-    value=st.session_state["biz_상호"],
-    placeholder="예) 래미안 강남 1단지"
-)
-
-주소 = st.text_input(
-    "주소",
-    value=st.session_state["biz_주소"],
-    placeholder="예) 서울특별시 강남구 테헤란로 123"
-)
-
-관리소전화 = st.text_input(
-    "관리소전화",
-    placeholder="예) 02-1234-5678"
-)
-
-st.divider()
-
-# ── 2. 설치 정보 ────────────────────────────────────────
-st.markdown("**🔌 설치 정보**")
-
-설치수량 = st.number_input(
-    "설치수량 (기)",
-    min_value=0, step=1, value=0
-)
-
-주차면수 = st.number_input(
-    "주차면수 (면)",
-    min_value=0, step=1, value=0
-)
-
-단가선택 = st.selectbox("설치단가", [
-    "3,500,000",
-    "2,500,000",
-    "직접입력"
-])
-
-if 단가선택 == "직접입력":
-    설치단가 = st.number_input(
-        "단가 직접입력 (원)",
-        min_value=0, step=10000, value=0
+# ── 행 1: 사업구분 / 아파트명 ──────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    사업구분 = st.selectbox("사업구분", [
+        "한국환경공단 이사장",
+        "주식회사 에버온인프라",
+        "기타"
+    ])
+with c2:
+    아파트명 = st.text_input(
+        "아파트명 *",
+        value=st.session_state["biz_상호"],
+        placeholder="예) 래미안 강남 1단지"
     )
-else:
-    설치단가 = int(단가선택.replace(",", ""))
 
-# 자동계산 표시
-calc = 설치수량 * 설치단가
-st.info(f"💡 자동계산: {설치수량}기 × {설치단가:,}원 = **{calc:,}원**")
-
-최종설치금액 = st.number_input(
-    "최종 설치금액 (원)",
-    min_value=0,
-    value=calc,
-    step=1,
-    format="%d"        # ← 정수 표시
-)
-
-# 콤마 포함 표시
-st.markdown(f"**💰 {최종설치금액:,} 원**")
-
+# ── 행 2: 주소 / 관리소전화 ────────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    주소 = st.text_input(
+        "주소",
+        value=st.session_state["biz_주소"],
+        placeholder="예) 서울특별시 강남구 테헤란로 123"
+    )
+with c2:
+    관리소전화 = st.text_input("관리소전화", placeholder="예) 02-1234-5678")
 
 st.divider()
 
-# ── 3. 계약 조건 ────────────────────────────────────────
-st.markdown("**📋 계약 조건**")
+# ── 행 3: 설치수량 / 주차면수 ──────────────────────────
+st.markdown("**🔌 설치 정보**")
+c1, c2 = st.columns(2)
+with c1:
+    설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0)
+with c2:
+    주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0)
 
-계약년수     = st.number_input("계약년수 (년)", min_value=0, value=7)
-프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0, value=0)
-프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0, value=0)
+# ── 행 4: 설치단가 / 직접입력 ──────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    단가선택 = st.selectbox("설치단가", ["3,500,000", "2,500,000", "직접입력"])
+with c2:
+    if 단가선택 == "직접입력":
+        설치단가 = st.number_input("단가 직접입력 (원)", min_value=0, step=10000, value=0)
+    else:
+        설치단가 = int(단가선택.replace(",", ""))
+        st.text_input("선택 단가", value=f"{설치단가:,} 원", disabled=True)
+
+# ── 행 5: 최종설치금액 ──────────────────────────────────
+calc = 설치수량 * 설치단가
+c1, c2 = st.columns(2)
+with c1:
+    최종설치금액 = st.number_input(
+        "최종 설치금액 (원)",
+        min_value=0,
+        value=calc,
+        step=1,
+        format="%d"
+    )
+with c2:
+    st.text_input("금액 확인", value=f"{최종설치금액:,} 원", disabled=True)
+
+st.divider()
+
+# ── 행 6: 계약년수 / 프로모션기간 ──────────────────────
+st.markdown("**📋 계약 조건**")
+c1, c2 = st.columns(2)
+with c1:
+    계약년수 = st.number_input("계약년수 (년)", min_value=0, value=7)
+with c2:
+    프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0, value=0)
+
+# ── 행 7: 프로모션요금 ──────────────────────────────────
+c1, c2 = st.columns(2)
+with c1:
+    프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0, value=0)
+with c2:
+    st.text_input("프로모션요금 확인", value=f"{프로모션요금:,} 원", disabled=True)
 
 st.divider()
 
@@ -337,7 +315,7 @@ if 생성실행:
                     result = process_hwpx(tpl, 데이터)
                     if result:
                         st.download_button(
-                            label="📂 신청서 (HWPX)",
+                            label="📂 신청서 (HWPX) 다운로드",
                             data=result,
                             file_name=f"{아파트명}_신청서.hwpx",
                             mime="application/octet-stream",
@@ -355,7 +333,7 @@ if 생성실행:
                     result = process_docx(tpl, 데이터)
                     if result:
                         st.download_button(
-                            label="📂 계약서 (DOCX)",
+                            label="📂 계약서 (DOCX) 다운로드",
                             data=result,
                             file_name=f"{아파트명}_계약서.docx",
                             mime="application/vnd.openxmlformats-officedocument"
