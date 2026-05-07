@@ -1,4 +1,7 @@
-streamlit
-supabase
+fastapi
+uvicorn[standard]
+python-docx
 docxtpl
-pandas
+supabase
+python-dotenv
+aiofiles
