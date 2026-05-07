@@ -120,26 +120,24 @@ if st.sidebar.button("🔄 템플릿 새로고침"):
 # ── 입력 폼 ─────────────────────────────────────────────
 with st.form("계약입력"):
     st.subheader("📝 계약 정보 입력")
+    st.divider()
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.markdown("**🏢 사업장 정보**")
         사업구분   = st.selectbox("사업구분", [
             "한국환경공단 이사장",
             "주식회사 에버온인프라",
             "기타"
         ])
-        아파트명   = st.text_input("아파트명 (고유키) *")
+        아파트명   = st.text_input("아파트명 *")
         주소       = st.text_input("주소")
         사업자번호 = st.text_input("사업자번호")
         관리소전화 = st.text_input("관리소전화")
 
     with c2:
-        st.markdown("**🔌 설치 정보**")
         설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0)
         주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0)
-
         단가선택 = st.selectbox("설치단가", [
             "3,500,000",
             "2,500,000",
@@ -151,24 +149,15 @@ with st.form("계약입력"):
             설치단가 = int(단가선택.replace(",", ""))
 
         calc = 설치수량 * 설치단가
-        최종설치금액 = st.number_input(
-            "최종 설치금액 (원)",
-            min_value=0,
-            value=calc
-        )
-        st.caption(f"💡 자동계산: {설치수량}기 × {설치단가:,}원 = {calc:,}원")
+        최종설치금액 = st.number_input("최종 설치금액 (원)", min_value=0, value=calc)
+        st.caption(f"💡 {설치수량}기 × {설치단가:,}원 = {calc:,}원")
 
     with c3:
-        st.markdown("**📋 계약 조건**")
         계약년수     = st.number_input("계약년수 (년)", min_value=0, value=7)
         프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0, value=0)
         프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0, value=0)
 
-        st.markdown("---")
-        st.metric("설치 수량", f"{설치수량} 기")
-        st.metric("계약 기간", f"{계약년수} 년")
-
-    st.markdown("---")
+    st.divider()
     col1, col2 = st.columns(2)
     미리보기 = col1.form_submit_button("🔍 미리보기", use_container_width=True)
     생성실행 = col2.form_submit_button(
@@ -176,6 +165,7 @@ with st.form("계약입력"):
         use_container_width=True,
         type="primary"
     )
+
 
 # ── 데이터 구성 ─────────────────────────────────────────
 데이터 = {
