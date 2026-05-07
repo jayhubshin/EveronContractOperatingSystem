@@ -266,7 +266,7 @@ with c2:
 
 st.divider()
 
-# ── 데이터 구성 (입력 위젯 다음에 위치) ────────────────
+# ── 데이터 구성 ─────────────────────────────────────────
 데이터 = {
     "사업구분":       사업구분,
     "아파트명":       아파트명,
@@ -284,15 +284,13 @@ st.divider()
     "프로모션요금원": f"{프로모션요금:,}",
 }
 
-# ── 세션 초기화 (사이드바 위에 위치) ───────────────────
-if "hwpx_data" not in st.session_state:
-    st.session_state["hwpx_data"] = None
-if "docx_data" not in st.session_state:
-    st.session_state["docx_data"] = None
-if "생성완료" not in st.session_state:
-    st.session_state["생성완료"] = False
-if "생성_아파트명" not in st.session_state:
-    st.session_state["생성_아파트명"] = ""
+# ── 아파트명 바뀌거나 비워지면 세션 초기화 ─────────────
+if 아파트명 != st.session_state["생성_아파트명"]:
+    st.session_state["hwpx_data"]     = None
+    st.session_state["docx_data"]     = None
+    st.session_state["생성완료"]       = False
+    st.session_state["생성_아파트명"] = 아파트명
+
 
 # ── 사이드바 ────────────────────────────────────────────
 st.sidebar.header("⚙️ 시스템 설정")
