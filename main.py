@@ -284,7 +284,17 @@ st.divider()
     "프로모션요금원": f"{프로모션요금:,}",
 }
 
-# ── 사이드바 (데이터 구성 다음에 위치) ─────────────────
+# ── 세션 초기화 (사이드바 위에 위치) ───────────────────
+if "hwpx_data" not in st.session_state:
+    st.session_state["hwpx_data"] = None
+if "docx_data" not in st.session_state:
+    st.session_state["docx_data"] = None
+if "생성완료" not in st.session_state:
+    st.session_state["생성완료"] = False
+if "생성_아파트명" not in st.session_state:
+    st.session_state["생성_아파트명"] = ""
+
+# ── 사이드바 ────────────────────────────────────────────
 st.sidebar.header("⚙️ 시스템 설정")
 저장옵션 = st.sidebar.radio(
     "데이터 저장 방식",
@@ -306,35 +316,47 @@ if st.sidebar.button("🔄 템플릿 새로고침", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-# ── 아파트명 없으면 비활성 ──────────────────────────────
+# 서류 생성 버튼
 생성가능 = bool(아파트명)
-
 생성실행 = st.sidebar.button(
     "🚀 서류 생성 및 다운로드",
     use_container_width=True,
     type="primary",
-    disabled=not 생성가능   # ← 아파트명 없으면 비활성
+    disabled=not 생성가능
 )
-
 if not 생성가능:
     st.sidebar.caption("⚠️ 아파트명을 입력하면 활성화됩니다.")
 
-# ── 세션에 생성된 파일 저장 ─────────────────────────────
-if "hwpx_data" not in st.session_state:
-    st.session_state["hwpx_data"] = None
-if "docx_data" not in st.session_state:
-    st.session_state["docx_data"] = None
-if "생성완료" not in st.session_state:
-    st.session_state["생성완료"] = False
-if "생성_아파트명" not in st.session_state:
-    st.session_state["생성_아파트명"] = ""
+st.sidebar.markdown("---")
+st.sidebar.markdown("**📥 서류 다운로드**")
 
-# ── 서류 생성 ───────────────────────────────────────────
+# 다운로드 버튼 — 항상 표시, 파일 없으면 비활성
+st.sidebar.download_button(
+    label="📂 신청서 (HWPX)",
+    data=st.session_state["hwpx_data"] or b"",
+    file_name=f"{st.session_state['생성_아파트명']}_신청서.hwpx",
+    mime="application/octet-stream",
+    use_container_width=True,
+    disabled=not st.session_state["hwpx_data"],   # ← 파일 없으면 비활성
+    key="dl_hwpx"
+)
+
+st.sidebar.download_button(
+    label="📂 계약서 (DOCX)",
+    data=st.session_state["docx_data"] or b"",
+    file_name=f"{st.session_state['생성_아파트명']}_계약서.docx",
+    mime="application/vnd.openxmlformats-officedocument"
+         ".wordprocessingml.document",
+    use_container_width=True,
+    disabled=not st.session_state["docx_data"],   # ← 파일 없으면 비활성
+    key="dl_docx"
+)
+
+# ── 서류 생성 실행 ──────────────────────────────────────
 if 생성실행:
     with st.sidebar:
         with st.spinner("📄 서류 생성 중..."):
 
-            # DB 저장
             if 저장옵션 == "DB 저장 및 서류 생성":
                 if supabase:
                     try:
@@ -347,64 +369,23 @@ if 생성실행:
                 else:
                     st.warning("⚠️ Supabase 미연결")
 
-            # HWPX 생성 후 세션에 저장
+            # HWPX 생성
             tpl = fetch_template("신청서_양식.hwpx")
             if tpl:
                 result = process_hwpx(tpl, 데이터)
-                if result:
-                    st.session_state["hwpx_data"] = result
-                else:
-                    st.error("HWPX 생성 실패")
-                    st.session_state["hwpx_data"] = None
+                st.session_state["hwpx_data"] = result if result else None
             else:
-                st.error("신청서 템플릿 로드 실패")
                 st.session_state["hwpx_data"] = None
 
-            # DOCX 생성 후 세션에 저장
+            # DOCX 생성
             tpl = fetch_template("계약서_양식.docx")
             if tpl:
                 result = process_docx(tpl, 데이터)
-                if result:
-                    st.session_state["docx_data"] = result
-                else:
-                    st.error("DOCX 생성 실패")
-                    st.session_state["docx_data"] = None
+                st.session_state["docx_data"] = result if result else None
             else:
-                st.error("계약서 템플릿 로드 실패")
                 st.session_state["docx_data"] = None
 
             st.session_state["생성완료"] = True
             st.session_state["생성_아파트명"] = 아파트명
 
-# ── 다운로드 버튼 (세션에 파일 있으면 항상 표시) ────────
-if st.session_state["생성완료"]:
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**📥 서류 다운로드**")
-    st.sidebar.caption(f"📌 {st.session_state['생성_아파트명']}")
-
-    # HWPX 다운로드
-    if st.session_state["hwpx_data"]:
-        st.sidebar.download_button(
-            label="📂 신청서 (HWPX)",
-            data=st.session_state["hwpx_data"],
-            file_name=f"{st.session_state['생성_아파트명']}_신청서.hwpx",
-            mime="application/octet-stream",
-            use_container_width=True,
-            key="dl_hwpx"        # ← 고정 key로 재렌더링 방지
-        )
-    else:
-        st.sidebar.error("신청서 생성 실패")
-
-    # DOCX 다운로드
-    if st.session_state["docx_data"]:
-        st.sidebar.download_button(
-            label="📂 계약서 (DOCX)",
-            data=st.session_state["docx_data"],
-            file_name=f"{st.session_state['생성_아파트명']}_계약서.docx",
-            mime="application/vnd.openxmlformats-officedocument"
-                 ".wordprocessingml.document",
-            use_container_width=True,
-            key="dl_docx"        # ← 고정 key로 재렌더링 방지
-        )
-    else:
-        st.sidebar.error("계약서 생성 실패")
+        st.rerun()   # ← 생성 완료 후 다운로드 버튼 즉시 활성화
