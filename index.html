@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ EV-CON: 에버온 계약 지원 시스템</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:       #00c4a7;
+      --primary-dark:  #009e87;
+      --secondary:     #1e3a5f;
+      --accent:        #f0b429;
+      --danger:        #e53e3e;
+      --success:       #38a169;
+      --bg:            #0d1b2a;
+      --surface:       #1a2d45;
+      --surface2:      #1f3550;
+      --border:        #2a4a6b;
+      --text:          #e2e8f0;
+      --text-muted:    #8faabe;
+      --radius:        12px;
+      --shadow:        0 8px 32px rgba(0,0,0,0.4);
+      --transition:    all 0.25s ease;
+    }
+    html { font-size: 15px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width: 260px;
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      transition: var(--transition);
+    }
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .icon {
+      font-size: 2rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sidebar-logo h1 { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+    .sidebar-logo p { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+    .sidebar-section-title {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--text-muted); text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .radio-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+    .radio-option {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--surface2);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .radio-option:hover { border-color: var(--primary); }
+    .radio-option.active {
+      border-color: var(--primary);
+      background: rgba(0,196,167,0.1);
+    }
+    .radio-option input[type="radio"] { display: none; }
+    .radio-dot {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid var(--border);
+      flex-shrink: 0; margin-top: 2px;
+      transition: var(--transition);
+    }
+    .radio-option.active .radio-dot {
+      border-color: var(--primary);
+      background: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,196,167,0.2);
+    }
+    .radio-label { font-size: 0.82rem; color: var(--text); font-weight: 500; line-height: 1.4; }
+
+    .sidebar-info {
+      margin-top: auto;
+      background: rgba(0,196,167,0.08);
+      border: 1px solid rgba(0,196,167,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .sidebar-info strong { color: var(--primary); }
+
+    /* ===== MAIN CONTENT ===== */
+    .main {
+      margin-left: 260px;
+      flex: 1;
+      padding: 32px 36px;
+      min-height: 100vh;
+    }
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .page-title { font-size: 1.6rem; font-weight: 800; color: var(--text); }
+    .page-title span { color: var(--primary); }
+    .badge {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff; font-size: 0.7rem; font-weight: 700;
+      padding: 4px 12px; border-radius: 20px; letter-spacing: 0.05em;
+    }
+
+    /* ===== STAT CARDS ===== */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .stat-card.green::before  { background: var(--primary); }
+    .stat-card.blue::before   { background: #4299e1; }
+    .stat-card.yellow::before { background: var(--accent); }
+    .stat-card.red::before    { background: var(--danger); }
+    .stat-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; margin: 6px 0 4px; color: var(--text); }
+    .stat-sub   { font-size: 0.72rem; color: var(--text-muted); }
+    .stat-icon  { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 2rem; opacity: 0.15; }
+
+    /* ===== FORM CARD ===== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-header h2 { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .card-header .icon { font-size: 1.2rem; }
+
+    /* ===== FORM GRID ===== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px 24px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.span2 { grid-column: span 2; }
+    .form-group.span3 { grid-column: span 3; }
+    label {
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.9rem;
+      width: 100%;
+      transition: var(--transition);
+      outline: none;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,196,167,0.15);
+    }
+    input::placeholder { color: var(--text-muted); opacity: 0.6; }
+    select option { background: var(--surface2); }
+
+    /* ===== CALCULATED FIELD ===== */
+    .calc-field {
+      background: rgba(0,196,167,0.07);
+      border: 1.5px solid rgba(0,196,167,0.35);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .calc-hint {
+      font-size: 0.73rem; color: var(--text-muted);
+      margin-top: 4px; padding-left: 2px;
+    }
+
+    /* ===== SECTION DIVIDER ===== */
+    .section-divider {
+      grid-column: span 3;
+      display: flex; align-items: center; gap: 12px;
+      margin: 8px 0;
+    }
+    .section-divider span { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+    .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ===== BUTTON ROW ===== */
+    .btn-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin-top: 24px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px 20px;
+      border: none; border-radius: 8px;
+      font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; transition: var(--transition);
+      letter-spacing: 0.02em;
+    }
+    .btn-preview {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-preview:hover {
+      border-color: var(--primary); color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0,196,167,0.15);
+    }
+    .btn-generate {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+    }
+    .btn-generate:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(0,196,167,0.4);
+    }
+    .btn:active { transform: translateY(0) scale(0.98); }
+
+    /* ===== PREVIEW PANEL ===== */
+    .preview-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .preview-panel.visible { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .data-table th, .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left; font-size: 0.85rem;
+    }
+    .data-table th { color: var(--text-muted); font-weight: 600; width: 38%; background: var(--bg); }
+    .data-table td { color: var(--text); font-weight: 500; }
+    .data-table tr:last-child th,
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table .highlight td { color: var(--primary); font-weight: 700; }
+
+    .pdf-frame {
+      width: 100%; height: 700px;
+      border: none; border-radius: 8px;
+      margin-top: 16px;
+      background: #f9f9f9;
+    }
+
+    /* ===== DOWNLOAD CARDS ===== */
+    .download-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+      margin-top: 16px;
+    }
+    .download-card {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; transition: var(--transition);
+      text-decoration: none;
+    }
+    .download-card:hover {
+      border-color: var(--primary);
+      background: rgba(0,196,167,0.08);
+      transform: translateY(-2px);
+    }
+    .download-icon { font-size: 2rem; flex-shrink: 0; }
+    .download-label { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .download-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+
+    /* ===== TOAST ===== */
+    .toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: var(--surface);
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      animation: slideIn 0.3s ease, fadeOut 0.4s ease 3.6s forwards;
+      min-width: 280px;
+    }
+    .toast.error   { border-left-color: var(--danger); }
+    .toast.warning { border-left-color: var(--accent); }
+    .toast.success { border-left-color: var(--success); }
+    @keyframes slideIn  { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes fadeOut  { from { opacity:1; } to   { opacity:0; } }
+
+    /* ===== LOADING SPINNER ===== */
+    .spinner-overlay {
+      position: fixed; inset: 0;
+      background: rgba(13,27,42,0.75);
+      display: none; align-items: center; justify-content: center;
+      z-index: 500; flex-direction: column; gap: 16px;
+    }
+    .spinner-overlay.active { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-label { color: var(--text-muted); font-size: 0.85rem; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1100px) {
+      .stat-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 860px) {
+      .sidebar { width: 200px; }
+      .main { margin-left: 200px; padding: 20px; }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+      .section-divider { grid-column: span 2; }
+      .form-group.span3 { grid-column: span 2; }
+    }
+    @media (max-width: 620px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; }
+      .form-grid { grid-template-columns: 1fr; }
+      .btn-row { grid-template-columns: 1fr; }
+      .download-grid { grid-template-columns: 1fr; }
+      .stat-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== SPINNER ===== -->
+<div class="spinner-overlay" id="spinner">
+  <div class="spinner"></div>
+  <span class="spinner-label">처리 중입니다...</span>
+</div>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span class="icon">⚡</span>
+    <div>
+      <h1>EV-CON</h1>
+      <p>에버온 계약 지원 시스템</p>
+    </div>
+  </div>
+
+  <p class="sidebar-section-title">⚙️ 시스템 설정</p>
+  <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;">데이터 저장 방식</p>
+  <div class="radio-group">
+    <label class="radio-option" id="opt1" onclick="setMode('db')">
+      <input type="radio" name="saveMode" value="db" />
+      <div class="radio-dot"></div>
+      <span class="radio-label">DB 저장 및 서류 생성</span>
+    </label>
+    <label class="radio-option active" id="opt2" onclick="setMode('local')">
+      <input type="radio" name="saveMode" value="local" checked />
+      <div class="radio-dot"></div>
+      <span class="radio-label">저장 없이 서류만 생성</span>
+    </label>
+  </div>
+
+  <div class="sidebar-info">
+    <strong>현재 모드:</strong><br/>
+    <span id="modeLabel">저장 없이 서류만 생성</span><br/><br/>
+    <strong>서버:</strong> Supabase 연동<br/>
+    <strong>템플릿:</strong> HWPX / DOCX
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+
+  <!-- 헤더 -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">⚡ <span>EV-CON</span> 계약 지원 시스템</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">에버온 전기차 충전기 설치 계약 자동화 플랫폼</div>
+    </div>
+    <span class="badge">v2.0 DASHBOARD</span>
+  </div>
+
+  <!-- 요약 카드 -->
+  <div class="stat-row">
+    <div class="stat-card green">
+      <div class="stat-label">설치 수량</div>
+      <div class="stat-value" id="stat_cnt">0 기</div>
+      <div class="stat-sub">입력된 충전기 수량</div>
+      <div class="stat-icon">🔌</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">설치 금액</div>
+      <div class="stat-value" id="stat_price">0 원</div>
+      <div class="stat-sub">자동 계산 금액</div>
+      <div class="stat-icon">💰</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">계약 기간</div>
+      <div class="stat-value" id="stat_years">0 년</div>
+      <div class="stat-sub">프로모션 포함</div>
+      <div class="stat-icon">📅</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">프로모션 요금</div>
+      <div class="stat-value" id="stat_promo">0 원</div>
+      <div class="stat-sub">적용 기간 요금</div>
+      <div class="stat-icon">🎁</div>
+    </div>
+  </div>
+
+  <!-- 입력 폼 카드 -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">📝</span>
+      <h2>상세 계약 정보 입력</h2>
+    </div>
+
+    <div class="form-grid">
+
+      <!-- 섹션 1: 사업장 정보 -->
+      <div class="section-divider"><span>🏢 사업장 정보</span></div>
+
+      <div class="form-group">
+        <label>사업구분</label>
+        <select id="사업구분" onchange="updateStats()">
+          <option value="한국환경공단 이사장">한국환경공단 이사장</option>
+          <option value="주식회사 에버온인프라">주식회사 에버온인프라</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>아파트명 (고유키) *</label>
+        <input type="text" id="아파트명" placeholder="예) 래미안 강남 1단지" oninput="updateStats()" />
+      </div>
+
+      <div class="form-group">
+        <label>사업자번호</label>
+        <input type="text" id="사업자번호" placeholder="예) 123-45-67890" />
+      </div>
+
+      <div class="form-group span3">
+        <label>주소</label>
+        <input type="text" id="주소" placeholder="예) 서울특별시 강남구 테헤란로 123" />
+      </div>
+
+      <div class="form-group">
+        <label>관리소 전화</label>
+        <input type="text" id="관리소전화" placeholder="예) 02-1234-5678" />
+      </div>
+
+      <!-- 섹션 2: 설치 정보 -->
+      <div class="section-divider"><span>🔌 설치 정보</span></div>
+
+      <div class="form-group">
+        <label>설치 수량 (기)</label>
+        <input type="number" id="설치수량" value="0" min="0" oninput="calcTotal()" />
+      </div>
+
+      <div class="form-group">
+        <label>주차면수 (면)</label>
+        <input type="number" id="주차면수" value="0" min="0" oninput="updateStats()" />
+      </div>
+
+      <div class="form-group">
+        <label>설치단가 선택</label>
+        <select id="단가선택" onchange="onPriceSelect()">
+          <option value="3500000">3,500,000 원</option>
+          <option value="2500000">2,500,000 원</option>
+          <option value="custom">직접입력</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="customPriceGroup" style="display:none;">
+        <label>단가 직접 입력 (원)</label>
+        <input type="number" id="설치단가_custom" value="0" min="0" step="10000" oninput="calcTotal()" />
+      </div>
+
+      <div class="form-group">
+        <label>최종 설치금액 (원)</label>
+        <div class="calc-field" id="최종설치금액_display">0 원</div>
+        <input type="hidden" id="최종설치금액" value="0" />
+        <div class="calc-hint" id="calcHint">💡 수량 × 단가 자동 계산</div>
+      </div>
+
+      <!-- 섹션 3: 계약 조건 -->
+      <div class="section-divider"><span>📋 계약 조건</span></div>
+
+      <div class="form-group">
+        <label>계약년수 (년)</label>
+        <input type="number" id="계약년수" value="7" min="0" oninput="updateStats()" />
+      </div>
+
+      <div class="form-group">
+        <label>프로모션 기간 (월)</label>
+        <input type="number" id="프로모션기간" value="0" min="0" oninput="updateStats()" />
+      </div>
+
+      <div class="form-group">
+        <label>프로모션 요금 (원)</label>
+        <input type="number" id="프로모션요금" value="0" min="0" oninput="updateStats()" />
+      </div>
+
+    </div><!-- /form-grid -->
+
+    <!-- 실행 버튼 -->
+    <div class="btn-row">
+      <button class="btn btn-preview" onclick="doPreview()">
+        🔍 서류 미리보기 (데이터 확인)
+      </button>
+      <button class="btn btn-generate" onclick="doGenerate()">
+        🚀 서류 생성 및 저장 실행
+      </button>
+    </div>
+  </div><!-- /card -->
+
+  <!-- 미리보기 패널 -->
+  <div class="preview-panel" id="previewPanel">
+    <div class="card-header" style="border:none;padding:0 0 16px 0;margin:0 0 16px 0;border-bottom:1px solid var(--border);">
+      <span class="icon">📋</span>
+      <h2>입력 데이터 확인</h2>
+    </div>
+    <table class="data-table" id="previewTable">
+      <tbody></tbody>
+    </table>
+    <!-- PDF 미리보기 자리 (실제 연동 시 iframe 사용) -->
+    <div id="pdfPreviewArea" style="display:none; margin-top:20px;">
+      <iframe class="pdf-frame" id="pdfFrame" src=""></iframe>
+    </div>
+  </div>
+
+  <!-- 다운로드 패널 -->
+  <div class="preview-panel" id="downloadPanel">
+    <div class="card-header" style="border:none;padding:0 0 16px 0;margin:0 0 16px 0;border-bottom:1px solid var(--border);">
+      <span class="icon">📥</span>
+      <h2>최종 서류 다운로드</h2>
+    </div>
+    <div class="download-grid">
+      <a class="download-card" id="hwpxDownload" href="#" download>
+        <span class="download-icon">📂</span>
+        <div>
+          <div class="download-label">신청서 (HWP) 받기</div>
+          <div class="download-sub" id="hwpxFilename">파일명이 여기 표시됩니다</div>
+        </div>
+      </a>
+      <a class="download-card" id="docxDownload" href="#" download>
+        <span class="download-icon">📂</span>
+        <div>
+          <div class="download-label">계약서 (워드) 받기</div>
+          <div class="download-sub" id="docxFilename">파일명이 여기 표시됩니다</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+  // ── 저장 모드 ──────────────────────────────────────────
+  let saveMode = 'local';
+  function setMode(mode) {
+    saveMode = mode;
+    document.getElementById('opt1').classList.toggle('active', mode === 'db');
+    document.getElementById('opt2').classList.toggle('active', mode === 'local');
+    document.getElementById('modeLabel').textContent =
+      mode === 'db' ? 'DB 저장 및 서류 생성' : '저장 없이 서류만 생성';
+  }
+
+  // ── 단가 선택 ──────────────────────────────────────────
+  function onPriceSelect() {
+    const sel = document.getElementById('단가선택').value;
+    const customGrp = document.getElementById('customPriceGroup');
+    customGrp.style.display = sel === 'custom' ? 'flex' : 'none';
+    calcTotal();
+  }
+
+  // ── 총액 자동 계산 ─────────────────────────────────────
+  function calcTotal() {
+    const qty = parseInt(document.getElementById('설치수량').value) || 0;
+    const sel = document.getElementById('단가선택').value;
+    let price = sel === 'custom'
+      ? (parseInt(document.getElementById('설치단가_custom').value) || 0)
+      : parseInt(sel);
+
+    const total = qty * price;
+    document.getElementById('최종설치금액').value = total;
+    document.getElementById('최종설치금액_display').textContent = total.toLocaleString('ko-KR') + ' 원';
+    document.getElementById('calcHint').textContent = `💡 ${qty.toLocaleString()} 기 × ${price.toLocaleString()} 원 = ${total.toLocaleString()} 원`;
+
+    updateStats();
+  }
+
+  // ── 상단 요약 카드 업데이트 ────────────────────────────
+  function updateStats() {
+    const qty    = parseInt(document.getElementById('설치수량').value) || 0;
+    const total  = parseInt(document.getElementById('최종설치금액').value) || 0;
+    const years  = parseInt(document.getElementById('계약년수').value) || 0;
+    const promo  = parseInt(document.getElementById('프로모션요금').value) || 0;
+
+    document.getElementById('stat_cnt').textContent   = qty.toLocaleString() + ' 기';
+    document.getElementById('stat_price').textContent  = total.toLocaleString() + ' 원';
+    document.getElementById('stat_years').textContent  = years + ' 년';
+    document.getElementById('stat_promo').textContent  = promo.toLocaleString() + ' 원';
+  }
+
+  // ── 데이터 수집 ────────────────────────────────────────
+  function collectData() {
+    const sel = document.getElementById('단가선택').value;
+    const 단가 = sel === 'custom'
+      ? (parseInt(document.getElementById('설치단가_custom').value) || 0)
+      : parseInt(sel);
+
+    return {
+      사업구분:     document.getElementById('사업구분').value,
+      아파트명:     document.getElementById('아파트명').value.trim(),
+      주소:         document.getElementById('주소').value.trim(),
+      사업자번호:   document.getElementById('사업자번호').value.trim(),
+      관리소전화:   document.getElementById('관리소전화').value.trim(),
+      설치수량:     parseInt(document.getElementById('설치수량').value) || 0,
+      주차면수:     parseInt(document.getElementById('주차면수').value) || 0,
+      설치단가:     단가,
+      설치금액:     parseInt(document.getElementById('최종설치금액').value) || 0,
+      계약년수:     parseInt(document.getElementById('계약년수').value) || 0,
+      프로모션기간: parseInt(document.getElementById('프로모션기간').value) || 0,
+      프로모션요금: parseInt(document.getElementById('프로모션요금').value) || 0,
+    };
+  }
+
+  // ── 유효성 검사 ────────────────────────────────────────
+  function validate(data) {
+    if (!data.아파트명) { showToast('아파트명을 입력해주세요.', 'warning'); return false; }
+    return true;
+  }
+
+  // ── 미리보기 ───────────────────────────────────────────
+  function doPreview() {
+    const data = collectData();
+    if (!validate(data)) return;
+
+    // 테이블 렌더
+    const labels = {
+      사업구분:'사업구분', 아파트명:'아파트명', 주소:'주소', 사업자번호:'사업자번호',
+      관리소전화:'관리소 전화', 설치수량:'설치 수량 (기)', 주차면수:'주차면수 (면)',
+      설치단가:'설치 단가 (원)', 설치금액:'최종 설치금액 (원)',
+      계약년수:'계약년수 (년)', 프로모션기간:'프로모션 기간 (월)', 프로모션요금:'프로모션 요금 (원)'
+    };
+    const numericKeys = ['설치수량','주차면수','설치단가','설치금액','프로모션요금'];
+    const highlightKeys = ['설치금액'];
+
+    let rows = '';
+    for (const [k, label] of Object.entries(labels)) {
+      const val = numericKeys.includes(k)
+        ? (data[k] || 0).toLocaleString('ko-KR') + ' 원'
+        : (data[k] || '-');
+      const cls = highlightKeys.includes(k) ? ' class="highlight"' : '';
+      rows += `<tr${cls}><th>${label}</th><td>${val}</td></tr>`;
+    }
+    document.getElementById('previewTable').querySelector('tbody').innerHTML = rows;
+
+    const panel = document.getElementById('previewPanel');
+    panel.classList.add('visible');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    showToast('입력 데이터를 확인해주세요.', 'success');
+
+    // 실제 백엔드 연동 시: fetchPDF(data) 호출하여 iframe에 표시
+    // 예시: fetchPDF(data);
+  }
+
+  // ── 서류 생성 & 저장 ───────────────────────────────────
+  async function doGenerate() {
+    const data = collectData();
+    if (!validate(data)) return;
+
+    showSpinner(true);
+    try {
+      // ── 백엔드 API 호출 (실제 연동 시 주석 해제) ──────
+      // const response = await fetch('/api/generate', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ data, saveMode })
+      // });
+      // const result = await response.json();
+      // if (!response.ok) throw new Error(result.message || '서버 오류');
+      //
+      // 다운로드 링크 적용
+      // document.getElementById('hwpxDownload').href = result.hwpxUrl;
+      // document.getElementById('docxDownload').href  = result.docxUrl;
+      // ── ──────────────────────────────────────────── ──
+
+      // 시뮬레이션 딜레이 (실제 연동 시 제거)
+      await sleep(1500);
+
+      const apt = data.아파트명;
+      document.getElementById('hwpxFilename').textContent = `${apt}_신청서.hwpx`;
+      document.getElementById('docxFilename').textContent  = `${apt}_계약서.docx`;
+
+      if (saveMode === 'db') showToast('✅ DB 저장 완료! 서류가 생성되었습니다.', 'success');
+      else showToast('✅ 서류가 생성되었습니다. (DB 저장 생략)', 'success');
+
+      const panel = document.getElementById('downloadPanel');
+      panel.classList.add('visible');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      showToast(`오류: ${err.message}`, 'error');
+    } finally {
+      showSpinner(false);
+    }
+  }
+
+  // ── PDF 미리보기 (백엔드 연동 예시) ───────────────────
+  // async function fetchPDF(data) {
+  //   const resp = await fetch('/api/preview-pdf', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify(data)
+  //   });
+  //   const blob = await resp.blob();
+  //   const url  = URL.createObjectURL(blob);
+  //   document.getElementById('pdfFrame').src = url;
+  //   document.getElementById('pdfPreviewArea').style.display = 'block';
+  // }
+
+  // ── 유틸 ───────────────────────────────────────────────
+  function showSpinner(on) {
+    document.getElementById('spinner').classList.toggle('active', on);
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function showToast(msg, type = 'success') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4200);
+  }
+
+  // ── 초기화 ─────────────────────────────────────────────
+  calcTotal();
+</script>
+</body>
+</html>
