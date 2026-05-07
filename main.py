@@ -263,8 +263,14 @@ st.info(f"💡 자동계산: {설치수량}기 × {설치단가:,}원 = **{calc:
 최종설치금액 = st.number_input(
     "최종 설치금액 (원)",
     min_value=0,
-    value=calc       # ← 실시간 자동 기입
+    value=calc,
+    step=1,
+    format="%d"        # ← 정수 표시
 )
+
+# 콤마 포함 표시
+st.markdown(f"**💰 {최종설치금액:,} 원**")
+
 
 st.divider()
 
