@@ -305,65 +305,106 @@ if st.sidebar.button("🔄 템플릿 새로고침", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
+
+# ── 아파트명 없으면 비활성 ──────────────────────────────
+생성가능 = bool(아파트명)
+
 생성실행 = st.sidebar.button(
     "🚀 서류 생성 및 다운로드",
     use_container_width=True,
-    type="primary"
+    type="primary",
+    disabled=not 생성가능   # ← 아파트명 없으면 비활성
 )
 
-# ── 서류 생성 (사이드바 안에서 출력) ───────────────────
+if not 생성가능:
+    st.sidebar.caption("⚠️ 아파트명을 입력하면 활성화됩니다.")
+
+# ── 세션에 생성된 파일 저장 ─────────────────────────────
+if "hwpx_data" not in st.session_state:
+    st.session_state["hwpx_data"] = None
+if "docx_data" not in st.session_state:
+    st.session_state["docx_data"] = None
+if "생성완료" not in st.session_state:
+    st.session_state["생성완료"] = False
+if "생성_아파트명" not in st.session_state:
+    st.session_state["생성_아파트명"] = ""
+
+# ── 서류 생성 ───────────────────────────────────────────
 if 생성실행:
-    if not 아파트명:
-        st.sidebar.error("❌ 아파트명은 필수입니다.")
+    with st.sidebar:
+        with st.spinner("📄 서류 생성 중..."):
+
+            # DB 저장
+            if 저장옵션 == "DB 저장 및 서류 생성":
+                if supabase:
+                    try:
+                        supabase.table("contracts").upsert(
+                            데이터, on_conflict="아파트명"
+                        ).execute()
+                        st.success("✅ DB 저장 완료!")
+                    except Exception as e:
+                        st.error(f"DB 저장 오류: {e}")
+                else:
+                    st.warning("⚠️ Supabase 미연결")
+
+            # HWPX 생성 후 세션에 저장
+            tpl = fetch_template("신청서_양식.hwpx")
+            if tpl:
+                result = process_hwpx(tpl, 데이터)
+                if result:
+                    st.session_state["hwpx_data"] = result
+                else:
+                    st.error("HWPX 생성 실패")
+                    st.session_state["hwpx_data"] = None
+            else:
+                st.error("신청서 템플릿 로드 실패")
+                st.session_state["hwpx_data"] = None
+
+            # DOCX 생성 후 세션에 저장
+            tpl = fetch_template("계약서_양식.docx")
+            if tpl:
+                result = process_docx(tpl, 데이터)
+                if result:
+                    st.session_state["docx_data"] = result
+                else:
+                    st.error("DOCX 생성 실패")
+                    st.session_state["docx_data"] = None
+            else:
+                st.error("계약서 템플릿 로드 실패")
+                st.session_state["docx_data"] = None
+
+            st.session_state["생성완료"] = True
+            st.session_state["생성_아파트명"] = 아파트명
+
+# ── 다운로드 버튼 (세션에 파일 있으면 항상 표시) ────────
+if st.session_state["생성완료"]:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**📥 서류 다운로드**")
+    st.sidebar.caption(f"📌 {st.session_state['생성_아파트명']}")
+
+    # HWPX 다운로드
+    if st.session_state["hwpx_data"]:
+        st.sidebar.download_button(
+            label="📂 신청서 (HWPX)",
+            data=st.session_state["hwpx_data"],
+            file_name=f"{st.session_state['생성_아파트명']}_신청서.hwpx",
+            mime="application/octet-stream",
+            use_container_width=True,
+            key="dl_hwpx"        # ← 고정 key로 재렌더링 방지
+        )
     else:
-        with st.sidebar:
-            with st.spinner("📄 서류 생성 중..."):
+        st.sidebar.error("신청서 생성 실패")
 
-                if 저장옵션 == "DB 저장 및 서류 생성":
-                    if supabase:
-                        try:
-                            supabase.table("contracts").upsert(
-                                데이터, on_conflict="아파트명"
-                            ).execute()
-                            st.success("✅ DB 저장 완료!")
-                        except Exception as e:
-                            st.error(f"DB 저장 오류: {e}")
-                    else:
-                        st.warning("⚠️ Supabase 미연결")
-
-                st.markdown("**📥 서류 다운로드**")
-
-                # HWPX
-                tpl = fetch_template("신청서_양식.hwpx")
-                if tpl:
-                    result = process_hwpx(tpl, 데이터)
-                    if result:
-                        st.download_button(
-                            label="📂 신청서 (HWPX)",
-                            data=result,
-                            file_name=f"{아파트명}_신청서.hwpx",
-                            mime="application/octet-stream",
-                            use_container_width=True,
-                        )
-                    else:
-                        st.error("HWPX 생성 실패")
-                else:
-                    st.error("신청서 템플릿 로드 실패")
-
-                # DOCX
-                tpl = fetch_template("계약서_양식.docx")
-                if tpl:
-                    result = process_docx(tpl, 데이터)
-                    if result:
-                        st.download_button(
-                            label="📂 계약서 (DOCX)",
-                            data=result,
-                            file_name=f"{아파트명}_계약서.docx",
-                            mime="application/vnd.openxmlformats-officedocument"
-                                 ".wordprocessingml.document",
-                            use_container_width=True,
-                        )
-                    else:
-                        st.error("DOCX 생성 실패")
-                else:
-                    st.error("계약서 템플릿 로드 실패")
+    # DOCX 다운로드
+    if st.session_state["docx_data"]:
+        st.sidebar.download_button(
+            label="📂 계약서 (DOCX)",
+            data=st.session_state["docx_data"],
+            file_name=f"{st.session_state['생성_아파트명']}_계약서.docx",
+            mime="application/vnd.openxmlformats-officedocument"
+                 ".wordprocessingml.document",
+            use_container_width=True,
+            key="dl_docx"        # ← 고정 key로 재렌더링 방지
+        )
+    else:
+        st.sidebar.error("계약서 생성 실패")
