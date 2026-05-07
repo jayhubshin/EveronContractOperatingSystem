@@ -65,13 +65,14 @@ def lookup_business(biz_no: str) -> dict | None:
             st.warning("⚠️ 사업자번호 10자리를 확인해주세요.")
             return None
 
-        url  = "https://api.odcloud.kr/api/nts-businessman/v1/status"
-        body = {"b_no": [biz_no_clean]}
+        # ── 1단계: 상태 조회 (/status) ──────────────────
+        status_url  = "https://api.odcloud.kr/api/nts-businessman/v1/status"
+        status_body = {"b_no": [biz_no_clean]}
 
-        resp = httpx.post(
-            url,
+        status_resp = httpx.post(
+            status_url,
             params={"serviceKey": api_key},
-            json=body,
+            json=status_body,
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
@@ -79,38 +80,69 @@ def lookup_business(biz_no: str) -> dict | None:
             timeout=10
         )
 
-        if resp.status_code == 200:
-            data  = resp.json()
-            items = data.get("data", [])
-            if not items:
-                return None
+        상태 = ""
+        상태코드 = ""
+        if status_resp.status_code == 200:
+            items = status_resp.json().get("data", [])
+            if items:
+                item     = items[0]
+                상태코드  = item.get("b_stt_cd", "")
+                상태_map  = {"01": "✅ 계속사업자", "02": "⚠️ 휴업자", "03": "❌ 폐업자"}
+                상태      = 상태_map.get(상태코드, "알 수 없음")
 
-            item = items[0]
-            b_stt_cd = item.get("b_stt_cd", "")
+        # ── 2단계: 상호/대표자 조회 (/validate) ─────────
+        validate_url  = "https://api.odcloud.kr/api/nts-businessman/v1/validate"
+        validate_body = {
+            "businesses": [
+                {
+                    "b_no": biz_no_clean,
+                    "start_dt": "",   # 개업일 모르면 빈값
+                    "p_nm": "",       # 대표자 모르면 빈값
+                    "p_nm2": "",
+                    "b_nm": "",       # 상호 모르면 빈값
+                    "corp_no": "",
+                    "b_sector": "",
+                    "b_type": "",
+                    "b_adr": "",
+                }
+            ]
+        }
 
-            # 상태코드: 01=계속사업자, 02=휴업자, 03=폐업자
-            if b_stt_cd == "01":
-                상태 = "✅ 계속사업자"
-            elif b_stt_cd == "02":
-                상태 = "⚠️ 휴업자"
-            elif b_stt_cd == "03":
-                상태 = "❌ 폐업자"
-            else:
-                상태 = "알 수 없음"
+        validate_resp = httpx.post(
+            validate_url,
+            params={"serviceKey": api_key},
+            json=validate_body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            timeout=10
+        )
 
-            return {
-                "상호":   item.get("b_nm", ""),
-                "대표자": item.get("p_nm", ""),
-                "상태":   상태,
-                "상태코드": b_stt_cd,
-            }
-        else:
-            st.error(f"API 오류: {resp.status_code} / {resp.text}")
+        상호   = ""
+        대표자 = ""
+        if validate_resp.status_code == 200:
+            v_data  = validate_resp.json()
+            v_items = v_data.get("data", [])
+            if v_items:
+                v_item = v_items[0]
+                상호   = v_item.get("b_nm", "")
+                대표자 = v_item.get("p_nm", "")
+
+        if not 상태코드:
             return None
+
+        return {
+            "상호":   상호,
+            "대표자": 대표자,
+            "상태":   상태,
+            "상태코드": 상태코드,
+        }
 
     except Exception as e:
         st.error(f"사업자 조회 오류: {e}")
         return None
+
 
 
 # ── HWPX 메일머지 ───────────────────────────────────────
