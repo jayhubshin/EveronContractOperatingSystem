@@ -151,18 +151,19 @@ with st.form("계약입력"):
             설치단가 = int(단가선택.replace(",", ""))
 
         calc = 설치수량 * 설치단가
-        st.metric("💰 자동계산 금액", f"{calc:,} 원")
         최종설치금액 = st.number_input(
             "최종 설치금액 (원)",
             min_value=0,
             value=calc
         )
+        st.caption(f"💡 자동계산: {설치수량}기 × {설치단가:,}원 = {calc:,}원")
 
     with c3:
         st.markdown("**📋 계약 조건**")
         계약년수     = st.number_input("계약년수 (년)", min_value=0, value=7)
         프로모션기간 = st.number_input("프로모션기간 (월)", min_value=0, value=0)
         프로모션요금 = st.number_input("프로모션요금 (원)", min_value=0, value=0)
+
         st.markdown("---")
         st.metric("설치 수량", f"{설치수량} 기")
         st.metric("계약 기간", f"{계약년수} 년")
