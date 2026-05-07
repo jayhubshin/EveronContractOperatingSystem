@@ -52,15 +52,22 @@ def fetch_template(filename: str) -> bytes | None:
         return None
 # ── 사업자번호 자동 포맷 ────────────────────────────────
 def format_biz_no(value: str) -> str:
-    # 숫자만 추출
     digits = "".join(filter(str.isdigit, value))
-    # 000-00-00000 형식으로 포맷
     if len(digits) <= 3:
         return digits
     elif len(digits) <= 5:
         return f"{digits[:3]}-{digits[3:]}"
     else:
         return f"{digits[:3]}-{digits[3:5]}-{digits[5:10]}"
+
+def on_biz_change():
+    raw = st.session_state["biz_input"]
+    st.session_state["biz_input"] = format_biz_no(raw)
+
+# ── 세션 초기화 ─────────────────────────────────────────
+if "biz_input" not in st.session_state:
+    st.session_state["biz_input"] = ""
+
 # ── 국세청 사업자 조회 ──────────────────────────────────
 def lookup_business(biz_no: str) -> dict | None:
     try:
@@ -174,26 +181,21 @@ if "사업자번호_raw" not in st.session_state:
     st.session_state["사업자번호_raw"] = ""
 
 col_biz, col_btn = st.columns([4, 1])
+col_biz, col_btn = st.columns([4, 1])
 with col_biz:
-    사업자번호_raw = st.text_input(
+    st.text_input(
         "사업자번호",
-        value=st.session_state["사업자번호_raw"],
-        placeholder="예) 2108261110 또는 210-82-61110",
-        max_chars=12     # 000-00-00000 = 12자
+        key="biz_input",
+        placeholder="예) 2108261110 → 자동으로 210-82-61110",
+        max_chars=12,
+        on_change=on_biz_change    # ← 입력 끝날 때마다 자동 포맷
     )
-    # 입력할 때마다 자동 포맷
-    사업자번호 = format_biz_no(사업자번호_raw)
-    if 사업자번호_raw != 사업자번호:
-        st.session_state["사업자번호_raw"] = 사업자번호
-        st.rerun()
-
-    # 포맷된 번호 표시
-    if 사업자번호:
-        st.caption(f"✏️ {사업자번호}")
+    사업자번호 = st.session_state["biz_input"]
 
 with col_btn:
     st.markdown("<br/>", unsafe_allow_html=True)
     조회버튼 = st.button("🔍 조회", use_container_width=True)
+
 
 
 if 조회버튼:
