@@ -188,6 +188,7 @@ with st.form("계약입력"):
 
 # ── 미리보기 ────────────────────────────────────────────
 # ── 미리보기 ────────────────────────────────────────────
+# ── 미리보기 ────────────────────────────────────────────
 if 미리보기:
     if not 아파트명:
         st.warning("⚠️ 아파트명을 입력해주세요.")
@@ -196,166 +197,136 @@ if 미리보기:
 
         with tab1:
             st.markdown(f"""
-            <div style="
-                background:white; color:#111; padding:48px 56px;
-                border-radius:12px; font-family:'맑은 고딕','Malgun Gothic',sans-serif;
-                max-width:800px; margin:0 auto; box-shadow:0 4px 24px rgba(0,0,0,0.15);
-                line-height:1.8;
-            ">
-                <div style="text-align:center; margin-bottom:36px;">
-                    <h2 style="font-size:22px; font-weight:900; letter-spacing:4px; margin:0;">
-                        전기자동차 충전기 설치 신청서
-                    </h2>
-                    <div style="margin-top:8px; font-size:13px; color:#555;">
-                        {사업구분}
-                    </div>
-                </div>
+            <div style="background:white;color:#111;padding:48px 56px;border-radius:12px;
+                font-family:'맑은 고딕','Malgun Gothic',sans-serif;max-width:820px;
+                margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.15);line-height:1.8;font-size:14px;">
 
-                <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:28px;">
+                <h2 style="text-align:center;font-size:20px;font-weight:900;
+                    letter-spacing:3px;margin-bottom:32px;border-bottom:2px solid #111;padding-bottom:12px;">
+                    전기차 충전기 설치/운영 신청서
+                </h2>
+
+                <h3 style="font-size:15px;font-weight:700;margin:20px 0 8px;">1. 계약당사자</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
                     <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700; width:30%;">아파트명</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{아파트명}</td>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700; width:30%;">사업자번호</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{사업자번호}</td>
+                        <td rowspan="2" style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;text-align:center;width:12%;">신청자</td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;width:20%;">신청자명</td>
+                        <td colspan="2" style="padding:8px 12px;border:1px solid #bbb;"><b>{아파트명}</b> 입주자대표회의</td>
                     </tr>
                     <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">주소</td>
-                        <td colspan="3" style="padding:10px 14px; border:1px solid #ccc;">{주소}</td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">고유번호</td>
+                        <td colspan="2" style="padding:8px 12px;border:1px solid #bbb;">{사업자번호}</td>
                     </tr>
                     <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">관리소 전화</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{관리소전화}</td>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">주차면수</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{주차면수} 면</td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;text-align:center;">신청자</td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">주소</td>
+                        <td colspan="2" style="padding:8px 12px;border:1px solid #bbb;">{주소}</td>
                     </tr>
                     <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 수량</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치수량} 기</td>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 단가</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치단가:,} 원</td>
+                        <td rowspan="3" style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;text-align:center;">운영자<br/>(충전사업자)</td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">운영자명</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">㈜에버온</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">사업자번호: 105-87-79517</td>
                     </tr>
                     <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 금액</td>
-                        <td colspan="3" style="padding:10px 14px; border:1px solid #ccc; font-weight:700; color:#c00; font-size:16px;">
-                            ₩ {최종설치금액:,} 원
-                        </td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">대표자</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">유동수</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">전화: 1661-7766</td>
                     </tr>
                     <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">계약 기간</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{계약년수} 년</td>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 기간</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{프로모션기간} 월</td>
-                    </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 요금</td>
-                        <td colspan="3" style="padding:10px 14px; border:1px solid #ccc;">{프로모션요금:,} 원</td>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">주소</td>
+                        <td colspan="2" style="padding:8px 12px;border:1px solid #bbb;">서울시 중구 을지로 100 파인에비뉴 B동 3층</td>
                     </tr>
                 </table>
 
-                <div style="margin-top:48px; text-align:center; font-size:13px; color:#777;">
-                    위와 같이 전기자동차 충전기 설치를 신청합니다.
+                <h3 style="font-size:15px;font-weight:700;margin:20px 0 8px;">2. 계약내용</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;width:25%;">공사내용</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">2026년 완속 충전기 설치사업</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">충전기종류</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">7kW 완속충전기 (모델명: EVL-10073N)</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">설치수량</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;"><b>{설치수량} 기</b></td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">설치금액</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;color:#c00;font-weight:700;">
+                            {최종설치금액:,} 원 (= {설치단가:,} 원 × {설치수량} 기)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">위탁운영비용</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">무료 (정상가: 기당 5만원/월)</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">설치장소</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">{주소} 단지 내</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f0f0f0;padding:8px 12px;border:1px solid #bbb;font-weight:700;">계약기간</td>
+                        <td style="padding:8px 12px;border:1px solid #bbb;">준공 완료일로부터 <b>{계약년수} 년</b></td>
+                    </tr>
+                </table>
+
+                <h3 style="font-size:15px;font-weight:700;margin:20px 0 8px;">3. 고지사항 (주요 내용)</h3>
+                <div style="font-size:12.5px;line-height:1.9;color:#333;background:#fafafa;
+                    padding:16px 20px;border-radius:8px;border:1px solid #ddd;">
+                    <p>1) 충전시설의 소유는 ㈜에버온에 있으며 신청자는 운영에 협조한다.</p>
+                    <p>5) ㈜에버온은 위탁운영비용에 대해 신청자에게 별도 비용을 청구하지 않는다.</p>
+                    <p>8) 중도해지 위약금: 설치금액(기당 <b>{설치단가:,}원</b>) 기준으로 산출</p>
+                    <p>10) 프로모션 요금: 준공시점부터 <b>{프로모션기간}개월</b>간
+                        <b>{프로모션요금:,}원</b> 적용, 이후 표준요금 전환</p>
+                    <p>13) 계약만료 1개월 전까지 통지 없으면 동일 조건으로 1년씩 자동 연장</p>
                 </div>
-                <div style="margin-top:48px; display:flex; justify-content:space-between; font-size:14px;">
-                    <div style="text-align:center; width:45%;">
-                        신청인 : {아파트명} <br/><br/>
-                        <div style="border-top:1px solid #333; padding-top:8px; margin-top:32px;">서명</div>
-                    </div>
-                    <div style="text-align:center; width:45%;">
-                        수신 : {사업구분} <br/><br/>
-                        <div style="border-top:1px solid #333; padding-top:8px; margin-top:32px;">직인</div>
-                    </div>
+
+                <div style="margin-top:48px;font-size:13px;">
+                    <p style="text-align:right;">신청일 : 2026년 &nbsp;&nbsp;&nbsp; 월 &nbsp;&nbsp;&nbsp; 일</p>
+                    <br/>
+                    <p><b>[신청자]</b> {아파트명} 입주자대표회의 &nbsp;&nbsp;&nbsp;&nbsp; (인)</p>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         with tab2:
             st.markdown(f"""
-            <div style="
-                background:white; color:#111; padding:48px 56px;
-                border-radius:12px; font-family:'맑은 고딕','Malgun Gothic',sans-serif;
-                max-width:800px; margin:0 auto; box-shadow:0 4px 24px rgba(0,0,0,0.15);
-                line-height:1.8;
-            ">
-                <div style="text-align:center; margin-bottom:36px;">
-                    <h2 style="font-size:22px; font-weight:900; letter-spacing:4px; margin:0;">
-                        전기자동차 충전기 설치 계약서
-                    </h2>
-                </div>
-
-                <p style="font-size:14px; margin-bottom:24px;">
-                    <b>"{아파트명}"</b> (이하 "갑")과 <b>{사업구분}</b> (이하 "을")은
-                    아래와 같이 전기자동차 충전기 설치에 관한 계약을 체결한다.
-                </p>
-
-                <h3 style="font-size:15px; border-bottom:2px solid #333; padding-bottom:6px; margin-bottom:16px;">
-                    제1조 (계약 목적)
+            <div style="background:#fffef0;color:#333;padding:20px 28px;border-radius:10px;
+                font-family:'맑은 고딕','Malgun Gothic',sans-serif;max-width:820px;
+                margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,0.1);font-size:13px;line-height:1.8;">
+                <h3 style="text-align:center;font-size:16px;margin-bottom:16px;color:#555;">
+                    📝 입력된 치환 값 확인
                 </h3>
-                <p style="font-size:14px; margin-bottom:24px;">
-                    본 계약은 전기자동차 충전기 설치 및 운영에 관한 제반 사항을 규정함을 목적으로 한다.
-                </p>
-
-                <h3 style="font-size:15px; border-bottom:2px solid #333; padding-bottom:6px; margin-bottom:16px;">
-                    제2조 (계약 내용)
-                </h3>
-                <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:24px;">
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700; width:35%;">설치 장소</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{주소}</td>
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr style="background:#f0f0f0;">
+                        <th style="padding:8px 12px;border:1px solid #ccc;text-align:left;width:35%;">템플릿 변수</th>
+                        <th style="padding:8px 12px;border:1px solid #ccc;text-align:left;">치환될 값</th>
                     </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 수량</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치수량} 기</td>
-                    </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 단가</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치단가:,} 원</td>
-                    </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">총 설치 금액</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc; font-weight:700; color:#c00;">
-                            ₩ {최종설치금액:,} 원
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">계약 기간</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{계약년수} 년</td>
-                    </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 기간</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{프로모션기간} 월</td>
-                    </tr>
-                    <tr>
-                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 요금</td>
-                        <td style="padding:10px 14px; border:1px solid #ccc;">{프로모션요금:,} 원</td>
-                    </tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{아파트명}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;color:#c00;font-weight:700;">{아파트명} 입주자대표회의</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{사업자번호}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{사업자번호}</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{주소}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{주소}</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{설치수량}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{설치수량} 기</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{설치금액}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;color:#c00;font-weight:700;">{최종설치금액:,} 원</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{설치단가}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{설치단가:,} 원</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{계약년수}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{계약년수} 년</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{프로모션기간월}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{프로모션기간} 개월</td></tr>
+                    <tr><td style="padding:8px 12px;border:1px solid #ccc;">{{{{프로모션요금원}}}}</td>
+                        <td style="padding:8px 12px;border:1px solid #ccc;">{프로모션요금:,} 원</td></tr>
                 </table>
-
-                <h3 style="font-size:15px; border-bottom:2px solid #333; padding-bottom:6px; margin-bottom:16px;">
-                    제3조 (계약 기간)
-                </h3>
-                <p style="font-size:14px; margin-bottom:24px;">
-                    계약 기간은 설치 완료일로부터 <b>{계약년수}년</b>으로 하며,
-                    프로모션 기간 <b>{프로모션기간}개월</b> 동안은
-                    월 <b>{프로모션요금:,}원</b>을 적용한다.
+                <p style="margin-top:16px;font-size:12px;color:#888;text-align:center;">
+                    ⚠️ 위 값이 실제 DOCX/HWPX 템플릿에 치환되어 다운로드됩니다.
                 </p>
-
-                <div style="margin-top:60px;">
-                    <table style="width:100%; font-size:14px; border:none;">
-                        <tr>
-                            <td style="width:50%; text-align:center; padding:12px; border:none;">
-                                <div><b>갑 (신청인)</b></div>
-                                <div style="margin-top:8px;">{아파트명}</div>
-                                <div style="margin-top:4px; font-size:12px; color:#555;">{주소}</div>
-                                <div style="margin-top:32px; border-top:1px solid #333; padding-top:8px;">서명 / 인</div>
-                            </td>
-                            <td style="width:50%; text-align:center; padding:12px; border:none;">
-                                <div><b>을 (사업자)</b></div>
-                                <div style="margin-top:8px;">{사업구분}</div>
-                                <div style="margin-top:32px; border-top:1px solid #333; padding-top:8px;">서명 / 인</div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
             </div>
             """, unsafe_allow_html=True)
 
