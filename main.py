@@ -174,6 +174,64 @@ st.sidebar.markdown("---")
     type="primary"
 )
 
+if 생성실행:
+    if not 아파트명:
+        st.sidebar.error("❌ 아파트명은 필수입니다.")
+    else:
+        with st.sidebar:
+            with st.spinner("📄 서류 생성 중..."):
+
+                # DB 저장
+                if 저장옵션 == "DB 저장 및 서류 생성":
+                    if supabase:
+                        try:
+                            supabase.table("contracts").upsert(
+                                데이터, on_conflict="아파트명"
+                            ).execute()
+                            st.success("✅ DB 저장 완료!")
+                        except Exception as e:
+                            st.error(f"DB 저장 오류: {e}")
+                    else:
+                        st.warning("⚠️ Supabase 미연결")
+
+                st.markdown("**📥 서류 다운로드**")
+
+                # HWPX
+                tpl = fetch_template("신청서_양식.hwpx")
+                if tpl:
+                    result = process_hwpx(tpl, 데이터)
+                    if result:
+                        st.download_button(
+                            label="📂 신청서 (HWPX)",
+                            data=result,
+                            file_name=f"{아파트명}_신청서.hwpx",
+                            mime="application/octet-stream",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.error("HWPX 생성 실패")
+                else:
+                    st.error("신청서 템플릿 로드 실패")
+
+                # DOCX
+                tpl = fetch_template("계약서_양식.docx")
+                if tpl:
+                    result = process_docx(tpl, 데이터)
+                    if result:
+                        st.download_button(
+                            label="📂 계약서 (DOCX)",
+                            data=result,
+                            file_name=f"{아파트명}_계약서.docx",
+                            mime="application/vnd.openxmlformats-officedocument"
+                                 ".wordprocessingml.document",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.error("DOCX 생성 실패")
+                else:
+                    st.error("계약서 템플릿 로드 실패")
+
+
 # ════════════════════════════════════════════════════════
 #  입력 섹션
 # ════════════════════════════════════════════════════════
@@ -321,63 +379,3 @@ st.divider()
     "프로모션요금원": f"{프로모션요금:,}",
 }
 
-# ── 서류 생성 버튼 ──────────────────────────────────────
-
-if 생성실행:
-    if not 아파트명:
-        st.error("❌ 아파트명은 필수입니다.")
-    else:
-        with st.spinner("📄 서류 생성 중..."):
-
-            # DB 저장
-            if 저장옵션 == "DB 저장 및 서류 생성":
-                if supabase:
-                    try:
-                        supabase.table("contracts").upsert(
-                            데이터, on_conflict="아파트명"
-                        ).execute()
-                        st.success("✅ DB 저장 완료!")
-                    except Exception as e:
-                        st.error(f"DB 저장 오류: {e}")
-                else:
-                    st.warning("⚠️ Supabase 미연결")
-
-            st.subheader("📥 서류 다운로드")
-            col_a, col_b = st.columns(2)
-
-            # HWPX
-            with col_a:
-                tpl = fetch_template("신청서_양식.hwpx")
-                if tpl:
-                    result = process_hwpx(tpl, 데이터)
-                    if result:
-                        st.download_button(
-                            label="📂 신청서 (HWPX) 다운로드",
-                            data=result,
-                            file_name=f"{아파트명}_신청서.hwpx",
-                            mime="application/octet-stream",
-                            use_container_width=True,
-                        )
-                    else:
-                        st.error("HWPX 생성 실패")
-                else:
-                    st.error("신청서 템플릿 로드 실패")
-
-            # DOCX
-            with col_b:
-                tpl = fetch_template("계약서_양식.docx")
-                if tpl:
-                    result = process_docx(tpl, 데이터)
-                    if result:
-                        st.download_button(
-                            label="📂 계약서 (DOCX) 다운로드",
-                            data=result,
-                            file_name=f"{아파트명}_계약서.docx",
-                            mime="application/vnd.openxmlformats-officedocument"
-                                 ".wordprocessingml.document",
-                            use_container_width=True,
-                        )
-                    else:
-                        st.error("DOCX 생성 실패")
-                else:
-                    st.error("계약서 템플릿 로드 실패")
