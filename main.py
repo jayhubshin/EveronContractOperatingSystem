@@ -187,17 +187,178 @@ with st.form("계약입력"):
 }
 
 # ── 미리보기 ────────────────────────────────────────────
+# ── 미리보기 ────────────────────────────────────────────
 if 미리보기:
     if not 아파트명:
         st.warning("⚠️ 아파트명을 입력해주세요.")
     else:
-        st.subheader("📋 입력 데이터 확인")
-        rows = [
-            (k, f"{v:,} 원" if isinstance(v, int) and v > 0 else str(v))
-            for k, v in 데이터.items()
-            if not k.endswith("_fmt")
-        ]
-        st.table(pd.DataFrame(rows, columns=["항목", "내용"]))
+        tab1, tab2 = st.tabs(["📄 신청서 미리보기", "📝 계약서 미리보기"])
+
+        with tab1:
+            st.markdown(f"""
+            <div style="
+                background:white; color:#111; padding:48px 56px;
+                border-radius:12px; font-family:'맑은 고딕','Malgun Gothic',sans-serif;
+                max-width:800px; margin:0 auto; box-shadow:0 4px 24px rgba(0,0,0,0.15);
+                line-height:1.8;
+            ">
+                <div style="text-align:center; margin-bottom:36px;">
+                    <h2 style="font-size:22px; font-weight:900; letter-spacing:4px; margin:0;">
+                        전기자동차 충전기 설치 신청서
+                    </h2>
+                    <div style="margin-top:8px; font-size:13px; color:#555;">
+                        {사업구분}
+                    </div>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:28px;">
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700; width:30%;">아파트명</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{아파트명}</td>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700; width:30%;">사업자번호</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{사업자번호}</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">주소</td>
+                        <td colspan="3" style="padding:10px 14px; border:1px solid #ccc;">{주소}</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">관리소 전화</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{관리소전화}</td>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">주차면수</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{주차면수} 면</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 수량</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치수량} 기</td>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 단가</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치단가:,} 원</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 금액</td>
+                        <td colspan="3" style="padding:10px 14px; border:1px solid #ccc; font-weight:700; color:#c00; font-size:16px;">
+                            ₩ {최종설치금액:,} 원
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">계약 기간</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{계약년수} 년</td>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 기간</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{프로모션기간} 월</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 요금</td>
+                        <td colspan="3" style="padding:10px 14px; border:1px solid #ccc;">{프로모션요금:,} 원</td>
+                    </tr>
+                </table>
+
+                <div style="margin-top:48px; text-align:center; font-size:13px; color:#777;">
+                    위와 같이 전기자동차 충전기 설치를 신청합니다.
+                </div>
+                <div style="margin-top:48px; display:flex; justify-content:space-between; font-size:14px;">
+                    <div style="text-align:center; width:45%;">
+                        신청인 : {아파트명} <br/><br/>
+                        <div style="border-top:1px solid #333; padding-top:8px; margin-top:32px;">서명</div>
+                    </div>
+                    <div style="text-align:center; width:45%;">
+                        수신 : {사업구분} <br/><br/>
+                        <div style="border-top:1px solid #333; padding-top:8px; margin-top:32px;">직인</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with tab2:
+            st.markdown(f"""
+            <div style="
+                background:white; color:#111; padding:48px 56px;
+                border-radius:12px; font-family:'맑은 고딕','Malgun Gothic',sans-serif;
+                max-width:800px; margin:0 auto; box-shadow:0 4px 24px rgba(0,0,0,0.15);
+                line-height:1.8;
+            ">
+                <div style="text-align:center; margin-bottom:36px;">
+                    <h2 style="font-size:22px; font-weight:900; letter-spacing:4px; margin:0;">
+                        전기자동차 충전기 설치 계약서
+                    </h2>
+                </div>
+
+                <p style="font-size:14px; margin-bottom:24px;">
+                    <b>"{아파트명}"</b> (이하 "갑")과 <b>{사업구분}</b> (이하 "을")은
+                    아래와 같이 전기자동차 충전기 설치에 관한 계약을 체결한다.
+                </p>
+
+                <h3 style="font-size:15px; border-bottom:2px solid #333; padding-bottom:6px; margin-bottom:16px;">
+                    제1조 (계약 목적)
+                </h3>
+                <p style="font-size:14px; margin-bottom:24px;">
+                    본 계약은 전기자동차 충전기 설치 및 운영에 관한 제반 사항을 규정함을 목적으로 한다.
+                </p>
+
+                <h3 style="font-size:15px; border-bottom:2px solid #333; padding-bottom:6px; margin-bottom:16px;">
+                    제2조 (계약 내용)
+                </h3>
+                <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:24px;">
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700; width:35%;">설치 장소</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{주소}</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 수량</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치수량} 기</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">설치 단가</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{설치단가:,} 원</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">총 설치 금액</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc; font-weight:700; color:#c00;">
+                            ₩ {최종설치금액:,} 원
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">계약 기간</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{계약년수} 년</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 기간</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{프로모션기간} 월</td>
+                    </tr>
+                    <tr>
+                        <td style="background:#f5f5f5; padding:10px 14px; border:1px solid #ccc; font-weight:700;">프로모션 요금</td>
+                        <td style="padding:10px 14px; border:1px solid #ccc;">{프로모션요금:,} 원</td>
+                    </tr>
+                </table>
+
+                <h3 style="font-size:15px; border-bottom:2px solid #333; padding-bottom:6px; margin-bottom:16px;">
+                    제3조 (계약 기간)
+                </h3>
+                <p style="font-size:14px; margin-bottom:24px;">
+                    계약 기간은 설치 완료일로부터 <b>{계약년수}년</b>으로 하며,
+                    프로모션 기간 <b>{프로모션기간}개월</b> 동안은
+                    월 <b>{프로모션요금:,}원</b>을 적용한다.
+                </p>
+
+                <div style="margin-top:60px;">
+                    <table style="width:100%; font-size:14px; border:none;">
+                        <tr>
+                            <td style="width:50%; text-align:center; padding:12px; border:none;">
+                                <div><b>갑 (신청인)</b></div>
+                                <div style="margin-top:8px;">{아파트명}</div>
+                                <div style="margin-top:4px; font-size:12px; color:#555;">{주소}</div>
+                                <div style="margin-top:32px; border-top:1px solid #333; padding-top:8px;">서명 / 인</div>
+                            </td>
+                            <td style="width:50%; text-align:center; padding:12px; border:none;">
+                                <div><b>을 (사업자)</b></div>
+                                <div style="margin-top:8px;">{사업구분}</div>
+                                <div style="margin-top:32px; border-top:1px solid #333; padding-top:8px;">서명 / 인</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
 
 # ── 서류 생성 ───────────────────────────────────────────
 if 생성실행:
