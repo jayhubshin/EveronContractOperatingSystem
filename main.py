@@ -53,42 +53,65 @@ def fetch_template(filename: str) -> bytes | None:
 
 # ── 국세청 사업자정보 조회 ──────────────────────────────
 def lookup_business(biz_no: str) -> dict | None:
-    """
-    공공데이터포털 국세청 사업자등록정보 진위확인 API
-    https://www.data.go.kr/data/15081808/openapi.do
-    """
     try:
         api_key = st.secrets.get("NTS_API_KEY", "")
         if not api_key:
+            st.warning("⚠️ NTS_API_KEY가 Secrets에 없습니다.")
             return None
 
         # 하이픈 제거
-        biz_no_clean = biz_no.replace("-", "").strip()
+        biz_no_clean = biz_no.replace("-", "").replace(" ", "").strip()
         if len(biz_no_clean) != 10:
+            st.warning("⚠️ 사업자번호 10자리를 확인해주세요.")
             return None
 
-        url = "https://api.odcloud.kr/api/nts-businessman/v1/status"
-        params = {"serviceKey": api_key}
-        body   = {"b_no": [biz_no_clean]}
+        url  = "https://api.odcloud.kr/api/nts-businessman/v1/status"
+        body = {"b_no": [biz_no_clean]}
 
-        resp = httpx.post(url, params=params, json=body, timeout=10)
+        resp = httpx.post(
+            url,
+            params={"serviceKey": api_key},
+            json=body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            timeout=10
+        )
+
         if resp.status_code == 200:
-            data = resp.json()
+            data  = resp.json()
             items = data.get("data", [])
-            if items and items[0].get("b_stt_cd") == "01":  # 01 = 계속사업자
-                item = items[0]
-                return {
-                    "상호":   item.get("b_nm", ""),
-                    "주소":   item.get("b_adr", ""),
-                    "대표자": item.get("p_nm", ""),
-                    "업태":   item.get("b_type", ""),
-                    "종목":   item.get("b_sector", ""),
-                    "상태":   item.get("b_stt", ""),
-                }
-        return None
+            if not items:
+                return None
+
+            item = items[0]
+            b_stt_cd = item.get("b_stt_cd", "")
+
+            # 상태코드: 01=계속사업자, 02=휴업자, 03=폐업자
+            if b_stt_cd == "01":
+                상태 = "✅ 계속사업자"
+            elif b_stt_cd == "02":
+                상태 = "⚠️ 휴업자"
+            elif b_stt_cd == "03":
+                상태 = "❌ 폐업자"
+            else:
+                상태 = "알 수 없음"
+
+            return {
+                "상호":   item.get("b_nm", ""),
+                "대표자": item.get("p_nm", ""),
+                "상태":   상태,
+                "상태코드": b_stt_cd,
+            }
+        else:
+            st.error(f"API 오류: {resp.status_code} / {resp.text}")
+            return None
+
     except Exception as e:
-        st.warning(f"사업자 조회 오류: {e}")
+        st.error(f"사업자 조회 오류: {e}")
         return None
+
 
 # ── HWPX 메일머지 ───────────────────────────────────────
 def process_hwpx(template_bytes: bytes, data: dict) -> bytes | None:
@@ -185,16 +208,32 @@ if 조회버튼:
         with st.spinner("국세청 조회 중..."):
             result = lookup_business(사업자번호_input)
             if result:
+                상태코드 = result.get("상태코드", "")
+
+                # 상호를 아파트명으로 자동 기입
                 st.session_state["biz_상호"] = result.get("상호", "")
-                st.session_state["biz_주소"] = result.get("주소", "")
                 st.session_state["biz_checked"] = True
-                st.success(f"✅ 조회 완료: {result.get('상호')} / {result.get('상태')}")
+
+                if 상태코드 == "01":
+                    st.success(
+                        f"{result.get('상태')} | "
+                        f"상호: {result.get('상호')} | "
+                        f"대표자: {result.get('대표자')}"
+                    )
+                elif 상태코드 == "02":
+                    st.warning(
+                        f"{result.get('상태')} | "
+                        f"상호: {result.get('상호')}"
+                    )
+                elif 상태코드 == "03":
+                    st.error(
+                        f"{result.get('상태')} | "
+                        f"상호: {result.get('상호')} | "
+                        f"계약 불가 사업자입니다."
+                    )
             else:
-                nts_key = st.secrets.get("NTS_API_KEY", "")
-                if not nts_key:
-                    st.warning("⚠️ NTS_API_KEY가 설정되지 않았습니다. Secrets에 추가해주세요.")
-                else:
-                    st.error("❌ 사업자 정보를 찾을 수 없습니다. 번호를 확인해주세요.")
+                st.error("❌ 조회 결과가 없습니다. 사업자번호를 확인해주세요.")
+
 
 # ── 입력 폼 (1열) ───────────────────────────────────────
 with st.form("계약입력"):
