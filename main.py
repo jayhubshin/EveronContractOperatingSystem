@@ -303,30 +303,35 @@ with st.form("계약입력"):
     )
 
     st.divider()
-    st.markdown("**🔌 설치 정보**")
+st.markdown("**🔌 설치 정보**")
 
-    설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0)
-    주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0)
+설치수량 = st.number_input("설치수량 (기)", min_value=0, step=1, value=0, key="설치수량")
+주차면수 = st.number_input("주차면수 (면)", min_value=0, step=1, value=0, key="주차면수")
 
-    단가선택 = st.selectbox("설치단가", [
-        "3,500,000",
-        "2,500,000",
-        "직접입력"
-    ])
-    if 단가선택 == "직접입력":
-        설치단가 = st.number_input(
-            "단가 직접입력 (원)",
-            min_value=0, step=10000, value=0
-        )
-    else:
-        설치단가 = int(단가선택.replace(",", ""))
+단가선택 = st.selectbox("설치단가", [
+    "3,500,000",
+    "2,500,000",
+    "직접입력"
+], key="단가선택")
 
-    calc = 설치수량 * 설치단가
-    최종설치금액 = st.number_input(
-        "최종 설치금액 (원)",
-        min_value=0,
-        value=calc
+if 단가선택 == "직접입력":
+    설치단가 = st.number_input(
+        "단가 직접입력 (원)",
+        min_value=0, step=10000, value=0, key="단가직접"
     )
+else:
+    설치단가 = int(단가선택.replace(",", ""))
+
+# 자동계산
+calc = 설치수량 * 설치단가
+st.info(f"💡 {설치수량}기 × {설치단가:,}원 = **{calc:,}원**")
+
+최종설치금액 = st.number_input(
+    "최종 설치금액 (원) — 수정 가능",
+    min_value=0,
+    value=calc,   # ← 자동 기입
+    key="최종설치금액"
+)
     st.caption(f"💡 {설치수량}기 × {설치단가:,}원 = {calc:,}원")
 
     st.divider()
