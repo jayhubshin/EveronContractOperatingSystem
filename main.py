@@ -162,9 +162,17 @@ for fn in ["신청서_양식.hwpx", "계약서_양식.docx"]:
         st.sidebar.success(f"✅ {fn}")
     else:
         st.sidebar.error(f"❌ {fn}")
-if st.sidebar.button("🔄 템플릿 새로고침"):
+
+if st.sidebar.button("🔄 템플릿 새로고침", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
+
+st.sidebar.markdown("---")
+생성실행 = st.sidebar.button(
+    "🚀 서류 생성 및 다운로드",
+    use_container_width=True,
+    type="primary"
+)
 
 # ════════════════════════════════════════════════════════
 #  입력 섹션
@@ -314,11 +322,6 @@ st.divider()
 }
 
 # ── 서류 생성 버튼 ──────────────────────────────────────
-생성실행 = st.button(
-    "🚀 서류 생성 및 다운로드",
-    use_container_width=True,
-    type="primary"
-)
 
 if 생성실행:
     if not 아파트명:
