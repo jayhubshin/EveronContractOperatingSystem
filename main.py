@@ -145,6 +145,14 @@ if "biz_상호" not in st.session_state:
     st.session_state["biz_상호"] = ""
 if "biz_주소" not in st.session_state:
     st.session_state["biz_주소"] = ""
+if "hwpx_data" not in st.session_state:
+    st.session_state["hwpx_data"] = None
+if "docx_data" not in st.session_state:
+    st.session_state["docx_data"] = None
+if "생성완료" not in st.session_state:
+    st.session_state["생성완료"] = False
+if "생성_아파트명" not in st.session_state:
+    st.session_state["생성_아파트명"] = ""
 
 # ════════════════════════════════════════════════════════
 #  ★ 순서 중요: 입력 위젯 → 데이터 구성 → 사이드바 버튼
